@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom CSS Variables */
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-400 dark:bg-gray-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-500 dark:bg-gray-500;
+}
+
+/* F1 Track Animation */
+@keyframes trackAnimation {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.track-animation {
+  background-size: 200% 200%;
+  animation: trackAnimation 3s ease infinite;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+  @apply animate-spin rounded-full border-2 border-gray-300 border-t-f1-red;
+}
+
+/* Utility Classes */
+.glass-effect {
+  @apply bg-white/10 backdrop-blur-md border border-white/20;
+}
+
+.text-gradient {
+  @apply bg-gradient-to-r from-f1-red to-orange-500 bg-clip-text text-transparent;
+}
+
+.card-hover {
+  @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-2;
+}
+
+/* Team Color Utilities */
+.team-red-bull {
+  @apply bg-teams-red-bull text-white;
+}
+
+.team-mercedes {
+  @apply bg-teams-mercedes text-white;
+}
+
+.team-ferrari {
+  @apply bg-teams-ferrari text-white;
+}
+
+.team-mclaren {
+  @apply bg-teams-mclaren text-white;
+}
+
+.team-alpine {
+  @apply bg-teams-alpine text-white;
+}
+
+.team-aston-martin {
+  @apply bg-teams-aston-martin text-white;
+}

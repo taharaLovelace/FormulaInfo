@@ -1,0 +1,174 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+    id               String   @id @default(uuid()) @db.Uuid
+    email            String   @unique
+    username         String   @unique
+    passwordHash     String   @map("password_hash")
+    firstName        String?  @map("first_name")
+    lastName         String?  @map("last_name")
+    avatarUrl        String?  @map("avatar_url")
+    favoriteDriverId Int?     @map("favorite_driver_id")
+    favoriteTeamId   Int?     @map("favorite_team_id")
+    createdAt        DateTime @default(now()) @map("created_at")
+    updatedAt        DateTime @updatedAt @map("updated_at")
+
+    // Relations
+    favorites   UserFavorite[]
+    predictions UserPrediction[]
+
+    @@map("users")
+}
+
+model Driver {
+    id           Int       @id @default(autoincrement())
+    driverNumber Int?      @unique @map("driver_number")
+    fullName     String    @map("full_name")
+    firstName    String?   @map("first_name")
+    lastName     String?   @map("last_name")
+    nationality  String?
+    teamName     String?   @map("team_name")
+    birthDate    DateTime? @map("birth_date") @db.Date
+    bio          String?
+    imageUrl     String?   @map("image_url")
+    isActive     Boolean   @default(true) @map("is_active")
+    createdAt    DateTime  @default(now()) @map("created_at")
+    updatedAt    DateTime  @updatedAt @map("updated_at")
+
+    // Relations
+    raceResults RaceResult[]
+    predictions UserPrediction[]
+
+    @@map("drivers")
+}
+
+model Team {
+    id                 Int      @id @default(autoincrement())
+    name               String
+    fullName           String?  @map("full_name")
+    nationality        String?
+    base               String?
+    teamChief          String?  @map("team_chief")
+    technicalChief     String?  @map("technical_chief")
+    chassis            String?
+    powerUnit          String?  @map("power_unit")
+    firstTeamEntry     Int?     @map("first_team_entry")
+    worldChampionships Int      @default(0) @map("world_championships")
+    highestRaceFinish  Int?     @map("highest_race_finish")
+    polePositions      Int      @default(0) @map("pole_positions")
+    fastestLaps        Int      @default(0) @map("fastest_laps")
+    logoUrl            String?  @map("logo_url")
+    carImageUrl        String?  @map("car_image_url")
+    colorPrimary       String?  @map("color_primary")
+    colorSecondary     String?  @map("color_secondary")
+    isActive           Boolean  @default(true) @map("is_active")
+    createdAt          DateTime @default(now()) @map("created_at")
+    updatedAt          DateTime @updatedAt @map("updated_at")
+
+    // Relations
+    raceResults RaceResult[]
+
+    @@map("teams")
+}
+
+model Race {
+    id             Int       @id @default(autoincrement())
+    year           Int
+    round          Int
+    raceName       String    @map("race_name")
+    circuitName    String?   @map("circuit_name")
+    location       String?
+    country        String?
+    date           DateTime? @db.Date
+    time           DateTime? @db.Time
+    url            String?
+    fp1Date        DateTime? @map("fp1_date") @db.Date
+    fp1Time        DateTime? @map("fp1_time") @db.Time
+    fp2Date        DateTime? @map("fp2_date") @db.Date
+    fp2Time        DateTime? @map("fp2_time") @db.Time
+    fp3Date        DateTime? @map("fp3_date") @db.Date
+    fp3Time        DateTime? @map("fp3_time") @db.Time
+    qualifyingDate DateTime? @map("qualifying_date") @db.Date
+    qualifyingTime DateTime? @map("qualifying_time") @db.Time
+    sprintDate     DateTime? @map("sprint_date") @db.Date
+    sprintTime     DateTime? @map("sprint_time") @db.Time
+    createdAt      DateTime  @default(now()) @map("created_at")
+    updatedAt      DateTime  @updatedAt @map("updated_at")
+
+    // Relations
+    results     RaceResult[]
+    predictions UserPrediction[]
+
+    @@unique([year, round])
+    @@map("races")
+}
+
+model RaceResult {
+    id              Int      @id @default(autoincrement())
+    raceId          Int      @map("race_id")
+    driverId        Int      @map("driver_id")
+    teamId          Int      @map("team_id")
+    position        Int?
+    positionText    String?  @map("position_text")
+    points          Decimal? @db.Decimal(5, 1)
+    laps            Int?
+    timeOrRetired   String?  @map("time_or_retired")
+    milliseconds    BigInt?
+    fastestLap      Int?     @map("fastest_lap")
+    fastestLapRank  Int?     @map("fastest_lap_rank")
+    fastestLapTime  String?  @map("fastest_lap_time")
+    fastestLapSpeed Decimal? @map("fastest_lap_speed") @db.Decimal(6, 3)
+    statusId        Int?     @map("status_id")
+    createdAt       DateTime @default(now()) @map("created_at")
+
+    // Relations
+    race   Race   @relation(fields: [raceId], references: [id])
+    driver Driver @relation(fields: [driverId], references: [id])
+    team   Team   @relation(fields: [teamId], references: [id])
+
+    @@unique([raceId, driverId])
+    @@map("race_results")
+}
+
+model UserFavorite {
+    id           String   @id @default(uuid()) @db.Uuid
+    userId       String   @map("user_id") @db.Uuid
+    favoriteType String   @map("favorite_type")
+    favoriteId   Int      @map("favorite_id")
+    createdAt    DateTime @default(now()) @map("created_at")
+
+    // Relations
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, favoriteType, favoriteId])
+    @@map("user_favorites")
+}
+
+model UserPrediction {
+    id                String   @id @default(uuid()) @db.Uuid
+    userId            String   @map("user_id") @db.Uuid
+    raceId            Int      @map("race_id")
+    predictedWinnerId Int      @map("predicted_winner_id")
+    predictedPodium   Json?    @map("predicted_podium")
+    pointsEarned      Int      @default(0) @map("points_earned")
+    createdAt         DateTime @default(now()) @map("created_at")
+    updatedAt         DateTime @updatedAt @map("updated_at")
+
+    // Relations
+    user            User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    race            Race   @relation(fields: [raceId], references: [id])
+    predictedWinner Driver @relation(fields: [predictedWinnerId], references: [id])
+
+    @@unique([userId, raceId])
+    @@map("user_predictions")
+}
