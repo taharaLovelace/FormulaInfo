@@ -29,9 +29,15 @@ if [ -f /vagrant/database/init.sql ]; then
 fi
 
 # Configurar firewall
-ufw --force enable
+ufw --force reset
+ufw default deny incoming
+ufw default deny outgoing
 ufw allow 22/tcp
 ufw allow from 192.168.56.0/24 to any port 5432
+# Permitir tráfego interno entre VMs
+ufw allow out to 192.168.56.0/24
+# (Sem permitir saída externa: banco não deve acessar Internet)
+ufw --force enable
 
 # Habilitar PostgreSQL no boot
 systemctl enable postgresql

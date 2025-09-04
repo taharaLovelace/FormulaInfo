@@ -53,9 +53,15 @@ fi
 npx prisma generate
 
 # Configurar firewall
-ufw --force enable
+ufw --force reset
+ufw default deny incoming
+ufw default deny outgoing
 ufw allow 22/tcp
 ufw allow from 192.168.56.0/24 to any port 3001
+ufw allow out to 192.168.56.10  # Permite saída somente ao proxy
+ufw allow out to 192.168.56.0/24
+# (Bloqueia acesso direto à Internet; para chamadas externas use o proxy com regras apropriadas)
+ufw --force enable
 
 # Criar serviço systemd para o backend
 cat > /etc/systemd/system/formula-backend.service << EOF

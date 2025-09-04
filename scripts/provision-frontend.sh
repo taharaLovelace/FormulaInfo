@@ -40,9 +40,14 @@ fi
 npm run build
 
 # Configurar firewall
-ufw --force enable
+ufw --force reset
+ufw default deny incoming
+ufw default deny outgoing
 ufw allow 22/tcp
 ufw allow from 192.168.56.0/24 to any port 3000
+ufw allow out to 192.168.56.10  # Permite acesso apenas ao proxy
+ufw allow out to 192.168.56.0/24
+ufw --force enable
 
 # Criar serviço systemd para o frontend
 cat > /etc/systemd/system/formula-frontend.service << EOF

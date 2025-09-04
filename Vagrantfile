@@ -19,9 +19,11 @@ Vagrant.configure("2") do |config|
   config.vm.define "proxy" do |proxy|
     proxy.vm.hostname = "formula-proxy"
     
-    # Interfaces de rede
-    proxy.vm.network "private_network", ip: "192.168.56.10"
-    proxy.vm.network "public_network", type: "dhcp"
+  # Interfaces de rede
+  # 1) Interface NAT padrão (eth0) criada automaticamente pelo Vagrant -> acesso externo
+  # 2) Interface host-only para comunicação interna entre as VMs (eth1)
+  proxy.vm.network "private_network", ip: "192.168.56.10"
+  # (Removido public_network/bridge para manter o setup o mais simples possível)
     
     # Pasta compartilhada
     proxy.vm.synced_folder "./nginx", "/vagrant/nginx"
@@ -56,6 +58,8 @@ Vagrant.configure("2") do |config|
       vb.name = "formula-database"
       vb.memory = "2048"
       vb.cpus = 2
+      # Mantemos a interface NAT padrão durante o provisionamento para instalar pacotes.
+      # O bloqueio de acesso externo é feito via UFW no script de provisionamento.
     end
     
     # Script de provisionamento
@@ -80,6 +84,7 @@ Vagrant.configure("2") do |config|
       vb.name = "formula-backend"
       vb.memory = "2048"
       vb.cpus = 2
+      # Mantemos NAT para provisioning; saída externa depois será bloqueada por firewall.
     end
     
     # Script de provisionamento
@@ -107,6 +112,7 @@ Vagrant.configure("2") do |config|
       vb.name = "formula-frontend"
       vb.memory = "2048"
       vb.cpus = 2
+      # Mantemos NAT para provisioning; saída externa depois será bloqueada por firewall.
     end
     
     # Script de provisionamento
