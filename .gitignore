@@ -81,3 +81,5 @@ out/
 # Temporary folders
 tmp/
 temp/
+
+.vagrant
