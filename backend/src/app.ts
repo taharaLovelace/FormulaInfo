@@ -11,12 +11,7 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 
 // Routes
-import authRoutes from './routes/auth';
 import driversRoutes from './routes/drivers';
-import teamsRoutes from './routes/teams';
-import racesRoutes from './routes/races';
-import usersRoutes from './routes/users';
-import f1DataRoutes from './routes/f1-data';
 
 export const buildApp = async (): Promise<FastifyInstance> => {
   const app = Fastify({
@@ -113,12 +108,7 @@ export const buildApp = async (): Promise<FastifyInstance> => {
 
   // Register routes
   const apiPrefix = config.api.prefix;
-  await app.register(authRoutes, { prefix: `${apiPrefix}/auth` });
   await app.register(driversRoutes, { prefix: `${apiPrefix}/drivers` });
-  await app.register(teamsRoutes, { prefix: `${apiPrefix}/teams` });
-  await app.register(racesRoutes, { prefix: `${apiPrefix}/races` });
-  await app.register(usersRoutes, { prefix: `${apiPrefix}/users` });
-  await app.register(f1DataRoutes, { prefix: `${apiPrefix}/f1-data` });
 
   // 404 handler
   app.setNotFoundHandler(async (request, reply) => {
