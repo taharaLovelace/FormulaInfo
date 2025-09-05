@@ -50,7 +50,6 @@ Vagrant.configure("2") do |config|
     db.vm.network "private_network", ip: "192.168.56.11"
     
     # Pasta compartilhada
-    db.vm.synced_folder "./database", "/vagrant/database"
     db.vm.synced_folder "./scripts", "/vagrant/scripts"
     
     # Configurações específicas
