@@ -1,28 +1,165 @@
-Relatório de Execução das VMs (Vagrant)
-======================================
+# Formula Info - Relatório de Execução
 
-Objetivo: Validar se as VMs proxy, database, backend e frontend sobem conforme especificações:
+## Estrutura do Projeto
 
-Requisitos Atendidos (estado final):
-1. Proxy com NAT + host-only (acesso externo permitido).
-2. Demais VMs usam host-only para comunicação interna e possuem firewall bloqueando saída externa.
-3. Bloqueio implementado via UFW (deny outgoing) nas VMs database, backend e frontend.
-4. IPs internos:
-   - proxy: 192.168.56.10
-   - database: 192.168.56.11
-   - backend: 192.168.56.12
-   - frontend: 192.168.56.13
+O projeto Formula Info é composto por múltiplos serviços executando em máquinas virtuais separadas:
 
-Testes Sugeridos:
-1. Subir ambiente limpo: `vagrant destroy -f && vagrant up` (opcional se já estava rodando).
-2. IPs: `ip -4 addr show | grep 192.168.56` dentro de cada VM.
-3. Conectividade interna (ex backend): `ping -c2 192.168.56.11`.
-4. Bloqueio externo (backend/database/frontend): `ping -c2 8.8.8.8` deve falhar (blocked by UFW).
-5. Acesso externo proxy: `curl -I https://www.google.com` deve retornar cabeçalhos HTTP.
-6. UFW (backend): `sudo ufw status verbose` -> outgoing: deny (allow para rede interna/proxy).
+```
+FormulaInfo/
+├── backend/              # API Node.js com Fastify
+├── frontend/            # Frontend Next.js
+├── nginx/               # Configurações do proxy reverso
+└── scripts/             # Scripts de provisionamento
+```
 
-Observações:
-- Se alguma VM interna sair para Internet: verificar se UFW ativo (`sudo ufw status`). Reaplicar com: `sudo ufw --force reset && sudo ufw default deny outgoing && sudo ufw default deny incoming` e reabrir regras internas.
-- Opcional: após provisioning completo remover NIC NAT nas VMs internas via `VBoxManage modifyvm <vm-name> --nic1 none` (exige VM desligada). Não é necessário se firewall já bloqueia.
+### Máquinas Virtuais
 
-Status Final: Configuração aplicada e arquivos de documentação reduzidos conforme solicitado (mantido apenas README.md e este relatório).
+O projeto utiliza quatro VMs com Ubuntu 22.04 LTS:
+
+1. **Proxy (192.168.56.10)**
+   - Nginx como proxy reverso
+   - Única VM com acesso à internet
+   - Gerencia o tráfego entre os serviços
+
+2. **Database (192.168.56.11)**
+   - PostgreSQL
+   - Sem acesso à internet (apenas rede interna)
+   - Porta 5432 para conexões do backend
+
+3. **Backend (192.168.56.12)**
+   - Node.js 24.x
+   - API Fastify
+   - Sem acesso à internet (apenas rede interna)
+   - Porta 3001 para a API
+
+4. **Frontend (192.168.56.13)**
+   - Next.js
+   - Sem acesso à internet (apenas rede interna)
+   - Porta 3000 para a aplicação web
+
+## Comandos de Execução
+
+### 1. Iniciar as VMs
+
+Para iniciar todas as VMs:
+```bash
+vagrant up
+```
+
+Para iniciar VMs específicas:
+```bash
+vagrant up database backend  # Inicia apenas database e backend
+```
+
+### 2. Verificar Status das VMs
+```bash
+vagrant status
+```
+
+### 3. Acessar as VMs
+
+Para acessar uma VM específica:
+```bash
+vagrant ssh <nome-da-vm>  # Ex: vagrant ssh backend
+```
+
+### 4. Configuração do Banco de Dados
+
+O banco de dados é configurado automaticamente durante o provisionamento, mas caso seja necessário executar as migrations e seeds manualmente:
+
+```bash
+# Acessar a VM do backend
+vagrant ssh backend
+
+# Navegar até a pasta do backend
+cd /vagrant/backend
+
+# Executar as migrations
+npx prisma migrate deploy
+
+# Executar o seed
+npx prisma db seed
+```
+
+### 5. Verificação do Backend
+
+Para verificar se o backend está respondendo:
+```bash
+curl http://192.168.56.12:3001/api/v1/drivers
+```
+
+### 6. Logs e Monitoramento
+
+Para verificar os logs do backend:
+```bash
+# Na VM do backend
+tail -f /vagrant/backend/logs/app.log
+```
+
+Para verificar o status do serviço:
+```bash
+sudo systemctl status formula-backend
+```
+
+## Troubleshooting
+
+### Reiniciar Serviços
+
+Se necessário reiniciar o backend:
+```bash
+sudo systemctl restart formula-backend
+```
+
+Se necessário reiniciar o banco de dados:
+```bash
+sudo systemctl restart postgresql
+```
+
+### Verificar Conectividade
+
+Para testar a conexão entre backend e banco:
+```bash
+# Na VM do backend
+nc -zv 192.168.56.11 5432
+```
+
+### Limpar e Recriar o Ambiente
+
+Se necessário limpar todo o ambiente e começar do zero:
+```bash
+vagrant destroy -f  # Destrói todas as VMs
+vagrant up         # Recria todas as VMs
+```
+
+## Notas Importantes
+
+1. As VMs de backend e banco de dados não têm acesso à internet por design de segurança
+2. Toda comunicação externa deve passar pelo proxy
+3. As VMs se comunicam através da rede privada 192.168.56.0/24
+4. Os dados do banco são persistidos mesmo que a VM seja reiniciada
+5. O frontend e backend são montados como pastas compartilhadas nas VMs, permitindo desenvolvimento local
+
+## Comandos Úteis para Desenvolvimento
+
+### Backend
+
+```bash
+# Reinstalar dependências
+vagrant ssh backend -c "cd /vagrant/backend && npm install"
+
+# Gerar cliente Prisma
+vagrant ssh backend -c "cd /vagrant/backend && npx prisma generate"
+
+# Visualizar banco de dados com Prisma Studio
+vagrant ssh backend -c "cd /vagrant/backend && npx prisma studio"
+```
+
+### Database
+
+```bash
+# Conectar ao PostgreSQL
+vagrant ssh database -c "sudo -u postgres psql formulainfo"
+
+# Backup do banco de dados
+vagrant ssh database -c "sudo -u postgres pg_dump formulainfo > /vagrant/backup.sql"
+```
