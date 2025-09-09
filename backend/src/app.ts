@@ -1,4 +1,4 @@
-import Fastify, { FastifyInstance } from 'fastify';
+import Fastify from 'fastify';
 import { config } from './config/config';
 import { logger } from './utils/logger';
 
@@ -9,26 +9,30 @@ import compress from '@fastify/compress';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import { validatorCompiler, serializerCompiler, ZodTypeProvider, jsonSchemaTransform } from 'fastify-type-provider-zod';
 
 // Routes
 import driversRoutes from './routes/drivers';
 
-export const buildApp = async (): Promise<FastifyInstance> => {
-  const app = Fastify({
-    logger: {
-      level: config.logging.level,
-      transport: config.nodeEnv === 'development' ? {
-        target: 'pino-pretty',
-        options: {
-          colorize: true
-        }
-      } : undefined
-    }
-  });
+export const buildApp = async () => {
+  const app = Fastify({ logger }).withTypeProvider<ZodTypeProvider>();
 
-  // Register plugins
+  // Zod compilers
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
+
+  // CORS (restringir ao proxy)
   await app.register(cors, {
-    origin: config.cors.origin,
+    origin: (origin, cb) => {
+      const allowed = [
+        'http://192.168.56.10',
+        'http://localhost',
+      ];
+      // permitir chamadas internas (sem origin)
+      if (!origin) return cb(null, true);
+      if (allowed.includes(origin)) return cb(null, true);
+      return cb(new Error('Origin not allowed'), false);
+    },
     credentials: true
   });
 
@@ -38,7 +42,7 @@ export const buildApp = async (): Promise<FastifyInstance> => {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:"],
+        imgSrc: ["'self'", 'data:', 'https:'],
       },
     },
   });
@@ -56,88 +60,50 @@ export const buildApp = async (): Promise<FastifyInstance> => {
       openapi: '3.0.0',
       info: {
         title: 'Formula Info API',
-        description: 'API for Formula 1 fan platform with historical data and driver profiles',
         version: '1.0.0',
-        contact: {
-          name: 'Formula Info Team',
-          email: 'dev@formula-info.com'
-        }
       },
-      servers: [
-        {
-          url: `http://localhost:${config.port}${config.api.prefix}`,
-          description: 'Development server'
-        }
-      ],
       components: {
         securitySchemes: {
           bearerAuth: {
             type: 'http',
             scheme: 'bearer',
-            bearerFormat: 'JWT'
+            bearerFormat: 'JWT',
+            description: 'Digite "Bearer <seu-token>" no campo de autorização.'
           }
         }
       },
-      security: [{ bearerAuth: [] }]
-    }
+      security: [{ bearerAuth: [] }],
+    },
+    transform: jsonSchemaTransform,
   });
 
   await app.register(swaggerUi, {
     routePrefix: '/docs',
-    uiConfig: {
-      docExpansion: 'list',
-      deepLinking: false
-    },
     staticCSP: true,
     transformStaticCSP: (header) => header,
-    transformSpecification: (swaggerObject) => {
-      return swaggerObject;
-    },
-    transformSpecificationClone: true
   });
 
-  // Health check
-  app.get('/health', async () => {
-    return {
-      status: 'OK',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: config.nodeEnv
-    };
-  });
+  // Health
+  app.get('/health', async () => ({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: config.nodeEnv,
+  }));
 
-  // Register routes
+  // Register routes com prefixo
   const apiPrefix = config.api.prefix;
   await app.register(driversRoutes, { prefix: `${apiPrefix}/drivers` });
 
-  // 404 handler
+  // 404
   app.setNotFoundHandler(async (request, reply) => {
-    reply.status(404).send({
-      error: 'Route not found',
-      message: `Cannot ${request.method} ${request.url}`
-    });
+    reply.status(404).send({ error: 'Route not found', message: `Cannot ${request.method} ${request.url}` });
   });
 
   // Error handler
   app.setErrorHandler(async (error, request, reply) => {
-    logger.error('Error occurred:', {
-      message: error.message,
-      stack: error.stack,
-      url: request.url,
-      method: request.method,
-      ip: request.ip
-    });
-
-    const statusCode = error.statusCode || 500;
-    const message = error.statusCode ? error.message : 'Internal Server Error';
-
-    reply.status(statusCode).send({
-      error: true,
-      message,
-      statusCode,
-      timestamp: new Date().toISOString(),
-      ...(config.nodeEnv === 'development' && { stack: error.stack })
-    });
+    logger.error({ err: error, url: request.url, method: request.method, ip: request.ip }, 'Error occurred');
+    reply.status(error.statusCode || 500).send({ error: true, message: error.message || 'Internal Server Error' });
   });
 
   return app;

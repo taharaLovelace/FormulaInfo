@@ -48,7 +48,9 @@ ufw --force reset
 ufw default deny incoming
 ufw default deny outgoing
 ufw allow 22/tcp
-ufw allow from 192.168.56.0/24 to any port 3001
+# Permitir acesso à API apenas a partir do proxy
+ufw allow from 192.168.56.10 to any port 3001 proto tcp
+# Saída liberada apenas para proxy e rede interna
 ufw allow out to 192.168.56.10
 ufw allow out to 192.168.56.0/24
 ufw --force enable
