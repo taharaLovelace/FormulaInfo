@@ -1,22 +1,15 @@
 #!/bin/bash
 
-echo "=== Iniciando Frontend ==="
+echo "=== Iniciando Frontend (PM2 Dev) ==="
 
-# Ir para o diretório do frontend
 cd /vagrant/frontend
 
-# Instalar dependências (npm i)
-echo "Instalando dependências..."
+# Dependências
 npm install
 
-# Fazer build da aplicação
-echo "Fazendo build da aplicação..."
-npm run build
+# PM2 Start (com watch via polling)
+pm2 delete formula-frontend 2>/dev/null || true
+pm2 start ecosystem.config.cjs --only formula-frontend
+pm2 save
 
-# Iniciar o serviço
-echo "Iniciando serviço do frontend..."
-systemctl start formula-frontend
-
-echo "=== Frontend iniciado com sucesso! ==="
-echo "Status do serviço: $(systemctl is-active formula-frontend)"
-echo "Para ver logs: journalctl -u formula-frontend -f"
+echo "=== Frontend iniciado com PM2. Logs: pm2 logs formula-frontend ==="

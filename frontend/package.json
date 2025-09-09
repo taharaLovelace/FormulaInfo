@@ -12,7 +12,10 @@
     "type-check": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "dev:pm2": "pm2 start ecosystem.config.cjs --only formula-frontend && pm2 logs formula-frontend",
+    "dev:pm2:stop": "pm2 delete formula-frontend || true",
+    "dev:pm2:reload": "pm2 reload formula-frontend"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.17",

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "=== Iniciando Backend ==="
+echo "=== Iniciando Backend (PM2 Dev) ==="
 
 # Ir para o diretório do backend
 cd /vagrant/backend
@@ -9,22 +9,16 @@ cd /vagrant/backend
 echo "Instalando dependências..."
 npm install
 
-# Fazer build do projeto
-echo "Fazendo build do projeto..."
-npm run build
-
-# Executar migrações do Prisma se necessário
+# Prisma
 echo "Executando migrações do banco..."
 npx prisma migrate deploy 2>/dev/null || echo "Nenhuma migração pendente"
-
-# Gerar cliente Prisma
 echo "Gerando cliente Prisma..."
 npx prisma generate
 
-# Iniciar o serviço
-echo "Iniciando serviço do backend..."
-systemctl start formula-backend
+# PM2 Start (com watch via polling)
+echo "Iniciando serviço do backend com PM2..."
+pm2 delete formula-backend 2>/dev/null || true
+pm2 start ecosystem.config.cjs --only formula-backend
+pm2 save
 
-echo "=== Backend iniciado com sucesso! ==="
-echo "Status do serviço: $(systemctl is-active formula-backend)"
-echo "Para ver logs: journalctl -u formula-backend -f"
+echo "=== Backend iniciado com PM2. Logs: pm2 logs formula-backend ==="
