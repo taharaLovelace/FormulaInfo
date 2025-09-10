@@ -1,35 +1,10 @@
-# Formula Info 🏎️
+# Formula Info
 
-Plataforma para fãs de Fórmula 1 com backend Fastify, frontend Next.js e infraestrutura isolada via Vagrant (proxy, backend, frontend e banco de dados) em ambiente de laboratório de Computação em Nuvem.
-
-## 🚀 Tecnologias
-
-### Backend
-- **Node.js 24** - Runtime JavaScript moderno e performático
-- **Fastify** - Framework web rápido e eficiente com baixo overhead
-- **Zod** - Validação de schemas TypeScript-first
-- **Fastify Swagger** - Documentação automática da API
-- **Prisma** - ORM moderno para banco de dados
-- **PostgreSQL** - Banco de dados relacional
-- **Redis** - Cache e sessões
-- **JWT** - Autenticação segura
-
-### Frontend
-- **Next.js 14** - Framework React com App Router
-- **TypeScript** - Tipagem estática para JavaScript
-- **Tailwind CSS** - Framework CSS utilitário
-- **Framer Motion** - Animações fluidas
-- **React Hook Form** - Gerenciamento de formulários
-
-### Infra / DevOps
-- **Vagrant + VirtualBox** - Ambientes isolados por VM
-- **Nginx** - Proxy reverso central
-- **UFW** - Firewall para bloquear saída direta das VMs internas
-- *(Docker Compose listado anteriormente ainda pode ser usado em outro fluxo, mas o foco atual é Vagrant)*
+## Visão Geral da Arquitetura
 
 ## 🏗️ Arquitetura (Vagrant / Rede Interna)
 
-Ambiente composto por 4 VMs:
+O projeto é composto por quatro VMs (Vagrant + VirtualBox) em rede privada 192.168.56.0/24:
 
 | VM | Hostname | IP (host-only) | Função | Acesso Externo |
 |----|----------|----------------|--------|----------------|
@@ -54,113 +29,234 @@ Firewall (UFW):
   - proxy: permite saída HTTP/HTTPS
 ```
 
-## 📁 Estrutura do Projeto
+1. Proxy (192.168.56.10)
+   - Nginx como proxy reverso (porta 80)
+   - Encaminha requisições para Frontend e Backend
+2. Database (192.168.56.11)
+   - PostgreSQL (porta 5432)
+3. Backend (192.168.56.12)
+   - API Node.js (Fastify + Prisma) (porta 3001)
+   - Gerenciado por PM2 em modo desenvolvimento (hot reload via tsx)
+4. Frontend (192.168.56.13)
+   - Next.js (porta 3000)
+   - Gerenciado por PM2 em modo desenvolvimento
 
+Diretórios relevantes no repositório:
 ```
-formula-info/
-├── Vagrantfile                # Definição das 4 VMs
-├── scripts/                   # Scripts de provisionamento (provision-*.sh)
-├── backend/                   # API Fastify
-├── frontend/                  # Aplicação Next.js
-├── database/                  # Scripts SQL / init
-├── nginx/                     # Config Nginx (proxy)
-├── EXECUTION_REPORT.md        # Relatório do ambiente Vagrant
-└── README.md
+FormulaInfo/
+├── backend/              # API Node.js + Prisma
+├── frontend/             # Next.js
+├── nginx/                # Configurações do Nginx
+└── scripts/              # Provisionamento e startup
 ```
 
-## 🛠️ Desenvolvimento (Modo Vagrant)
+---
 
-### Pré-requisitos
-- VirtualBox
-- Vagrant
-- ~8 GB RAM disponível
-- Git
+## Como subir o ambiente
 
-### Subir ambiente completo
+1) Subir todas as VMs
 ```bash
-vagrant up          # Sobe proxy, database, backend, frontend
+vagrant up
 ```
 
-### Subir em ordem (recomendado para debug)
+2) Verificar status
 ```bash
-vagrant up database
-vagrant up backend
-vagrant up frontend
-vagrant up proxy
+vagrant status
 ```
 
-### Acessos (via host)
-- App (via proxy): http://192.168.56.10
-- Frontend direto: http://192.168.56.13:3000 (interno)
-- Backend direto: http://192.168.56.12:3001
-- Backend health: http://192.168.56.12:3001/health
-- Swagger: http://192.168.56.12:3001/docs (expor via proxy apenas se desejar)
-
-### Validar firewall
+3) Acessar uma VM
 ```bash
-vagrant ssh backend -c "sudo ufw status verbose"
-vagrant ssh database -c "sudo ufw status verbose"
+vagrant ssh <nome-da-vm>   # ex: vagrant ssh backend
 ```
-Esperado: deny outgoing (com regras allow para 192.168.56.0/24).
 
-### Testes rápidos
+As VMs de backend e frontend são iniciadas com PM2 (modo dev) pelos scripts de startup durante o provisionamento.
+
+---
+
+## URLs principais (via Proxy)
+- Frontend: http://192.168.56.10/
+- API: http://192.168.56.10/api/v1
+  - Lista de pilotos: http://192.168.56.10/api/v1/drivers
+
+---
+
+## Verificações rápidas
+
+Backend (na VM backend):
 ```bash
-curl -I http://192.168.56.10/health
-curl -I http://192.168.56.10/api/health
-curl -I http://192.168.56.12:3001/health
+pm2 status
+pm2 logs formula-backend --lines 100
+curl -sS http://localhost:3001/health
+curl -sS http://localhost:3001/api/v1/drivers | head
 ```
 
-### Logs
+Frontend (na VM frontend):
 ```bash
-vagrant ssh proxy    -c "sudo tail -f /var/log/nginx/access.log"
-vagrant ssh backend  -c "sudo journalctl -u formula-backend -f"
-vagrant ssh frontend -c "sudo journalctl -u formula-frontend -f"
-vagrant ssh database -c "sudo journalctl -u postgresql -f"
+pm2 status
+pm2 logs formula-frontend --lines 100
+curl -sS http://localhost:3000 | head
 ```
 
-### Destruir e recriar
+Proxy (na VM proxy):
+```bash
+# Testar acesso direto aos serviços
+curl -sS http://192.168.56.12:3001/health
+curl -sS http://192.168.56.13:3000 | head
+
+# Testar via proxy
+curl -sS http://localhost/api/v1/drivers | head
+
+# Validar e recarregar Nginx
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+---
+
+## Banco de Dados (migrations e seed)
+
+As migrations são aplicadas durante o startup do backend (migrate deploy). Para executar manualmente:
+```bash
+vagrant ssh backend
+cd /vagrant/backend
+
+# Aplicar migrations
+npx prisma migrate deploy
+
+# Rodar seed (usa o hook prisma.seed definido em package.json)
+npx prisma db seed
+# ou
+npm run db:seed
+```
+
+Para abrir o Prisma Studio:
+```bash
+vagrant ssh backend -c "cd /vagrant/backend && npx prisma studio"
+```
+
+---
+
+## Variáveis de ambiente
+
+Backend (`/vagrant/backend/.env`):
+```env
+DATABASE_URL="postgresql://postgres:postgres@192.168.56.11:5432/formulainfo"
+PORT=3001
+NODE_ENV=development
+API_PREFIX=/api/v1
+JWT_SECRET=alterar-em-producao
+```
+
+Frontend (`/vagrant/frontend/.env.local`):
+```env
+NEXT_PUBLIC_API_URL=http://192.168.56.10
+NEXT_PUBLIC_API_BASE_URL=http://192.168.56.10/api/v1
+NODE_ENV=development
+PORT=3000
+```
+(Um modelo está em `frontend/.env.example`).
+
+---
+
+## Execução e monitoramento com PM2
+
+Backend (na VM backend):
+```bash
+# Iniciar/reativar
+pm2 start /vagrant/backend/ecosystem.config.cjs --only formula-backend
+
+# Reiniciar / recarregar
+pm2 restart formula-backend
+pm2 reload formula-backend
+
+# Logs e status
+pm2 logs formula-backend
+pm2 status
+```
+
+Frontend (na VM frontend):
+```bash
+pm2 start /vagrant/frontend/ecosystem.config.cjs --only formula-frontend
+pm2 restart formula-frontend
+pm2 reload formula-frontend
+pm2 logs formula-frontend
+pm2 status
+```
+
+Arquivos de log:
+- Backend (PM2): `backend/logs/pm2-out.log`, `backend/logs/pm2-error.log`
+- Backend (aplicação/Pino): `backend/logs/app.log`, `backend/logs/error.log`
+- Frontend (PM2): `frontend/pm2-out.log`, `frontend/pm2-error.log`
+
+PM2 como serviço do usuário `vagrant` já é configurado durante o provisionamento.
+
+---
+
+## Nginx (Proxy)
+
+Config ativo: `/etc/nginx/conf.d/default.conf` (na VM proxy). Pontos-chave:
+- Upstreams apontam para IPs das VMs:
+  - `upstream frontend { server 192.168.56.13:3000; }`
+  - `upstream backend  { server 192.168.56.12:3001; }`
+- Bloco da API preserva o prefixo:
+```nginx
+location /api/ {
+    proxy_pass http://backend;   # sem barra no final!
+    # ...cabeçalhos e CORS...
+}
+```
+
+Testar e recarregar:
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+---
+
+## Troubleshooting
+
+- 502 Bad Gateway ao chamar a API via proxy:
+  1) Verifique se o backend está de pé
+  ```bash
+  vagrant ssh backend -c "pm2 status && curl -sS http://localhost:3001/health"
+  ```
+  2) Do proxy, teste conexão direta:
+  ```bash
+  vagrant ssh proxy -c "curl -sS http://192.168.56.12:3001/health"
+  ```
+  3) Valide o `proxy_pass` em `/etc/nginx/conf.d/default.conf` (sem barra no final) e recarregue o Nginx:
+  ```bash
+  vagrant ssh proxy -c "sudo nginx -t && sudo systemctl reload nginx"
+  ```
+
+- Porta 3001 não abrindo no backend:
+  - Veja logs: `pm2 logs formula-backend`
+  - Confirme que o processo está online: `pm2 status`
+  - Confirme firewall (na VM backend): `sudo ufw status`
+
+- Problemas com Prisma (P1001 / conexão DB):
+  - Verifique se a VM `database` está rodando: `vagrant status`
+  - Teste porta a partir do backend: `nc -zv 192.168.56.11 5432`
+
+- Reconstruir ambiente do zero:
 ```bash
 vagrant destroy -f && vagrant up
 ```
 
-### (Opcional) Endurecer proxy
-Adicionar depois ao UFW da VM proxy:
+---
+
+## Comandos úteis (referência)
+
+Backend:
 ```bash
-sudo ufw allow out 80
-sudo ufw allow out 443
-sudo ufw deny out any
+vagrant ssh backend -c "cd /vagrant/backend && npm install"
+vagrant ssh backend -c "cd /vagrant/backend && npx prisma generate"
 ```
 
-## 🎯 Funcionalidades Planejadas
+Database:
+```bash
+# Acessar o PostgreSQL
+vagrant ssh database -c "sudo -u postgres psql formulainfo"
 
-- [ ] Dashboard com estatísticas atuais da F1
-- [ ] Perfis detalhados dos pilotos
-- [ ] Histórico de corridas e campeonatos
-- [ ] Sistema de perfil de fã
-- [ ] Favoritos e preferências
-- [ ] Notificações de corridas
-
-## 📊 APIs Utilizadas
-
-- **OpenF1.org**: Dados em tempo real e históricos da F1
-- **Endpoints principais**:
-  - `/drivers` - Informações dos pilotos
-  - `/races` - Dados das corridas
-  - `/standings` - Classificações
-
-## 🧪 Troubleshooting Rápido
-
-| Sintoma | Ação |
-|---------|------|
-| Backend não sobe | `vagrant ssh backend` ➜ `journalctl -u formula-backend -n 50` |
-| Sem acesso externo no proxy | Testar `curl https://www.google.com` dentro da VM proxy |
-| VM interna acessando Internet | Verificar `sudo ufw status` e se NAT extra foi adicionada no VirtualBox GUI |
-| Erro 502 no proxy | `sudo tail -n 50 /var/log/nginx/error.log` |
-| Mudança em config Nginx não aplica | `sudo nginx -t && sudo systemctl reload nginx` |
-
-## 📝 Licença
-
-Este projeto está sob a licença MIT.
-
----
-Ambiente multi-VM validado: somente proxy com saída externa; comunicação interna funcional; health endpoints respondendo. Consulte `EXECUTION_REPORT.md` para detalhes de verificação.
+# Backup do banco
+vagrant ssh database -c "sudo -u postgres pg_dump formulainfo > /vagrant/backup.sql"
+```
