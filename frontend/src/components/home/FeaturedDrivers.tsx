@@ -81,13 +81,11 @@ export function FeaturedDrivers() {
             <p className="text-gray-600 text-sm">Lista atual de pilotos ativos</p>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setRefreshCounter(c => c + 1)}
+            <div
               className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={loading}
             >
-              {loading ? 'Atualizando...' : 'Recarregar'}
-            </button>
+              {loading ? 'Carregando...' : 'Temporada 2025'}
+            </div>
           </div>
         </div>
 
