@@ -1,12 +1,10 @@
 export function Stats() {
   return (
-    <div className="bg-white py-12">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="text-center">
-          <h2 className="text-3xl font-bold text-gray-900">Estatísticas da Temporada</h2>
-          <p className="mt-4 text-lg text-gray-600">Acompanhe os números da F1</p>
-        </div>
+    <section className="bg-white py-12">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8 text-center space-y-4">
+        <h2 className="text-3xl font-bold text-gray-900">Estatísticas da Temporada</h2>
+        <p className="text-gray-600">Em breve</p>
       </div>
-    </div>
+    </section>
   )
 }
