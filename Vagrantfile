@@ -22,7 +22,8 @@ Vagrant.configure("2") do |config|
   # Interfaces de rede
   # 1) Interface NAT padrão (eth0) criada automaticamente pelo Vagrant -> acesso externo
   # 2) Interface host-only para comunicação interna entre as VMs (eth1)
-  proxy.vm.network "private_network", ip: "192.168.56.10"
+  proxy.vm.network "private_network", ip: "192.168.56.10", virtualbox__intnet: "rede_interna"
+  proxy.vm.network "forwarded_port", guest: 80, host: 8080
   # (Removido public_network/bridge para manter o setup o mais simples possível)
     
     # Pasta compartilhada
@@ -47,7 +48,7 @@ Vagrant.configure("2") do |config|
     db.vm.hostname = "formula-db"
     
     # Interface de rede (host-only)
-    db.vm.network "private_network", ip: "192.168.56.11"
+    db.vm.network "private_network", ip: "192.168.56.11", virtualbox__intnet: "rede_interna"
     
     # Pasta compartilhada
     db.vm.synced_folder "./scripts", "/vagrant/scripts"
@@ -72,7 +73,7 @@ Vagrant.configure("2") do |config|
     backend.vm.hostname = "formula-backend"
     
     # Interface de rede (host-only)
-    backend.vm.network "private_network", ip: "192.168.56.12"
+    backend.vm.network "private_network", ip: "192.168.56.12", virtualbox__intnet: "rede_interna"
     
     # Pasta compartilhada
     backend.vm.synced_folder "./backend", "/vagrant/backend"
@@ -100,7 +101,7 @@ Vagrant.configure("2") do |config|
     frontend.vm.hostname = "formula-frontend"
     
     # Interface de rede (host-only)
-    frontend.vm.network "private_network", ip: "192.168.56.13"
+    frontend.vm.network "private_network", ip: "192.168.56.13", virtualbox__intnet: "rede_interna"
     
     # Pasta compartilhada
     frontend.vm.synced_folder "./frontend", "/vagrant/frontend"
