@@ -1,0 +1,93 @@
+services:
+  # PostgreSQL Database
+  database:
+    image: postgres:16-alpine
+    container_name: formula-database
+    environment:
+      POSTGRES_DB: formulainfo
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - formula-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d formulainfo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Backend API
+  backend:
+    build: ./backend
+    container_name: formula-backend
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@database:5432/formulainfo
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - JWT_EXPIRES_IN=7d
+      - PORT=3001
+      - NODE_ENV=development
+      - API_PREFIX=/api/v1
+      - LOG_LEVEL=info
+      - CORS_ORIGIN=http://localhost
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - backend_logs:/app/logs
+    networks:
+      - formula-network
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build: ./frontend
+    container_name: formula-frontend
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_BASE=http://localhost/api/v1
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - formula-network
+    restart: unless-stopped
+
+  # Nginx Proxy
+  proxy:
+    build: ./nginx
+    container_name: formula-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - nginx_logs:/var/log/nginx
+    networks:
+      - formula-network
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  backend_logs:
+  nginx_logs:
+
+networks:
+  formula-network:
+    driver: bridge

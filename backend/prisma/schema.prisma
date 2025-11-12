@@ -2,7 +2,8 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-    provider = "prisma-client-js"
+    provider      = "prisma-client-js"
+    binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -11,19 +12,19 @@ datasource db {
 }
 
 model Driver {
-    id           Int      @id @default(autoincrement())
-    driverNumber Int?     @unique @map("driver_number")
-    fullName     String   @map("full_name")
-    firstName    String?  @map("first_name")
-    lastName     String?  @map("last_name")
+    id           Int       @id @default(autoincrement())
+    driverNumber Int?      @unique @map("driver_number")
+    fullName     String    @map("full_name")
+    firstName    String?   @map("first_name")
+    lastName     String?   @map("last_name")
     nationality  String?
-    teamName     String?  @map("team_name")
+    teamName     String?   @map("team_name")
     birthDate    DateTime? @map("birth_date") @db.Date
     bio          String?
-    imageUrl     String?  @map("image_url")
-    isActive     Boolean  @default(true) @map("is_active")
-    createdAt    DateTime @default(now()) @map("created_at")
-    updatedAt    DateTime @updatedAt @map("updated_at")
+    imageUrl     String?   @map("image_url")
+    isActive     Boolean   @default(true) @map("is_active")
+    createdAt    DateTime  @default(now()) @map("created_at")
+    updatedAt    DateTime  @updatedAt @map("updated_at")
 
     @@map("drivers")
 }
