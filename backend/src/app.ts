@@ -1,5 +1,4 @@
 import Fastify from 'fastify';
-import { config } from './config/config';
 import { logger } from './utils/logger';
 
 // Plugins
@@ -14,7 +13,7 @@ import { validatorCompiler, serializerCompiler, ZodTypeProvider, jsonSchemaTrans
 // Routes
 import driversRoutes from './routes/drivers';
 
-export const buildApp = async () => {
+export const buildApp = async (config: any) => {
   const app = Fastify({ logger }).withTypeProvider<ZodTypeProvider>();
 
   // Zod compilers
@@ -25,7 +24,6 @@ export const buildApp = async () => {
   await app.register(cors, {
     origin: (origin, cb) => {
       const allowed = [
-        'http://192.168.56.10',
         'http://localhost',
       ];
       // permitir chamadas internas (sem origin)

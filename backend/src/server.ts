@@ -1,10 +1,16 @@
 import { buildApp } from './app';
-import { config } from './config/config';
+import { initializeConfig } from './config/config';
+import { initializePrisma } from './services/database.service';
 import { logger } from './utils/logger';
 
 const startServer = async () => {
   try {
-    const app = await buildApp();
+    // Inicializar configuração (com Azure Key Vault se configurado)
+    const config = await initializeConfig();
+    
+    initializePrisma();
+    
+    const app = await buildApp(config);
 
     await app.listen({ port: config.port, host: '0.0.0.0' });
 

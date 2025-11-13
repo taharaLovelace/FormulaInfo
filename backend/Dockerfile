@@ -2,11 +2,10 @@
 FROM node:24-alpine
 
 # Install dependencies needed for Prisma and health checks
-RUN apt-get update && apt-get install -y \
+RUN apk add --no-cache \
     curl \
-    libssl-dev \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    openssl \
+    ca-certificates
 
 WORKDIR /app
 
@@ -19,10 +18,6 @@ COPY . .
 
 # Generate Prisma Client  
 RUN npx prisma generate
-
-RUN npx prisma migrate deploy
-
-RUN npx prisma db seed
 
 # Create logs directory
 RUN mkdir -p logs

@@ -30,6 +30,8 @@
   "author": "Formula Info Team",
   "license": "MIT",
   "dependencies": {
+    "@azure/identity": "^4.0.1",
+    "@azure/keyvault-secrets": "^4.8.0",
     "@fastify/autoload": "^5.8.0",
     "@fastify/compress": "^6.5.0",
     "@fastify/cors": "^9.0.1",

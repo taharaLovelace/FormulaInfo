@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { getPrismaClient } from './database.service';
 
 export type ListDriversParams = {
   active?: boolean;
@@ -9,6 +7,7 @@ export type ListDriversParams = {
 
 export async function listDrivers(params: ListDriversParams) {
   const { active, team } = params;
+  const prisma = getPrismaClient();
   return prisma.driver.findMany({
     where: {
       ...(active !== undefined ? { isActive: active } : {}),
