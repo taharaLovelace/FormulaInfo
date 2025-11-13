@@ -21,16 +21,17 @@ export const buildApp = async () => {
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 
-  // CORS (restringir ao proxy)
   await app.register(cors, {
     origin: (origin, cb) => {
       const allowed = [
-        'http://192.168.56.10',
+        config.cors.origin,
         'http://localhost',
       ];
       // permitir chamadas internas (sem origin)
       if (!origin) return cb(null, true);
-      if (allowed.includes(origin)) return cb(null, true);
+      if (allowed.some(allowedOrigin => origin === allowedOrigin || origin.startsWith(allowedOrigin))) {
+        return cb(null, true);
+      }
       return cb(new Error('Origin not allowed'), false);
     },
     credentials: true
