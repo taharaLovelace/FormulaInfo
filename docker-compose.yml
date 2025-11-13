@@ -25,15 +25,8 @@ services:
   backend:
     build: ./backend
     container_name: formula-backend
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@database:5432/formulainfo
-      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
-      - JWT_EXPIRES_IN=7d
-      - PORT=3001
-      - NODE_ENV=development
-      - API_PREFIX=/api/v1
-      - LOG_LEVEL=info
-      - CORS_ORIGIN=http://localhost
+    env_file:
+      - ./backend/.env.docker
     ports:
       - "3001:3001"
     volumes:
