@@ -3,13 +3,12 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
+import AuthHeader from '../auth/AuthHeader'
 
 const navigation = [
   { name: 'Início', href: '/' },
   { name: 'Pilotos', href: '/drivers' },
   { name: 'Equipes', href: '/teams' },
-  { name: 'Corridas', href: '/races' },
-  { name: 'Estatísticas', href: '/stats' },
 ]
 
 export function Header() {
@@ -56,12 +55,7 @@ export function Header() {
         </div>
         
         <div className="hidden lg:flex lg:flex-1 lg:justify-end">
-          <Link
-            href="/auth/login"
-            className="text-sm font-semibold leading-6 text-gray-900 dark:text-white hover:text-f1-red dark:hover:text-f1-red transition-colors"
-          >
-            Entrar <span aria-hidden="true">&rarr;</span>
-          </Link>
+          <AuthHeader />
         </div>
       </nav>
       
@@ -106,13 +100,9 @@ export function Header() {
                   ))}
                 </div>
                 <div className="py-6">
-                  <Link
-                    href="/auth/login"
-                    className="-mx-3 block rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Entrar
-                  </Link>
+                  <div onClick={() => setMobileMenuOpen(false)}>
+                    <AuthHeader />
+                  </div>
                 </div>
               </div>
             </div>

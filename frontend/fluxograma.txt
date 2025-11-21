@@ -1,0 +1,10 @@
+1. Usuario preenche form → 
+2. Validação Zod → 
+3. onSubmit chama store.login() → 
+4. store chama authService.login() → 
+5. POST /auth/login para backend → 
+6. Backend retorna { user, tokens } → 
+7. Token salvo no localStorage → 
+8. Store atualizado com user + isAuthenticated: true → 
+9. UI re-renderiza mostrando usuário logado → 
+10. Redirect para página inicial
