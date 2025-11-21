@@ -21,6 +21,24 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: formula-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass redis_password
+    volumes:
+      - redis_data:/data
+    networks:
+      - formula-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   # Backend API
   backend:
     build: ./backend
@@ -37,6 +55,8 @@ services:
       - formula-network
     depends_on:
       database:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     restart: unless-stopped
 
@@ -78,6 +98,7 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
   backend_logs:
   nginx_logs:
 

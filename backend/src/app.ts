@@ -9,10 +9,13 @@ import compress from '@fastify/compress';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import cookie from '@fastify/cookie';
+import jwt from '@fastify/jwt';
 import { validatorCompiler, serializerCompiler, ZodTypeProvider, jsonSchemaTransform } from 'fastify-type-provider-zod';
 
 // Routes
 import driversRoutes from './routes/drivers';
+import authRoutes from './routes/auth';
 
 export const buildApp = async () => {
   const app = Fastify({ logger }).withTypeProvider<ZodTypeProvider>();
@@ -49,6 +52,14 @@ export const buildApp = async () => {
   });
 
   await app.register(compress);
+  
+  // Register cookie support
+  await app.register(cookie);
+
+  // Register JWT support
+  await app.register(jwt, {
+    secret: config.jwt.secret
+  });
 
   await app.register(rateLimit, {
     max: config.rateLimit.maxRequests,
@@ -95,6 +106,7 @@ export const buildApp = async () => {
   // Register routes com prefixo
   const apiPrefix = config.api.prefix;
   await app.register(driversRoutes, { prefix: `${apiPrefix}/drivers` });
+  await app.register(authRoutes, { prefix: `${apiPrefix}/auth` });
 
   // 404
   app.setNotFoundHandler(async (request, reply) => {
