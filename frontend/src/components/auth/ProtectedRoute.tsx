@@ -13,7 +13,7 @@ export default function ProtectedRoute({
   children, 
   redirectTo = '/auth/login' 
 }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, initialize } = useAuthStore();
+  const { isAuthenticated, isLoading, hasInitialized, initialize } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -24,13 +24,19 @@ export default function ProtectedRoute({
   useEffect(() => {
     // Só redireciona se não está carregando E não está autenticado
     // E se não estamos já na página de login para evitar loops
-    if (!isLoading && !isAuthenticated && typeof window !== 'undefined' && window.location.pathname !== redirectTo) {
+    if (
+      hasInitialized &&
+      !isLoading &&
+      !isAuthenticated &&
+      typeof window !== 'undefined' &&
+      window.location.pathname !== redirectTo
+    ) {
       router.push(redirectTo);
     }
-  }, [isAuthenticated, isLoading, router, redirectTo]);
+  }, [hasInitialized, isAuthenticated, isLoading, router, redirectTo]);
 
   // Mostra loading enquanto verifica a autenticação
-  if (isLoading) {
+  if (isLoading || !hasInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex items-center space-x-2">

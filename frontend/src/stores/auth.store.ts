@@ -7,6 +7,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  hasInitialized: boolean;
 }
 
 interface AuthActions {
@@ -27,8 +28,9 @@ export const useAuthStore = create<AuthStore>()(
       // Estado inicial
       user: null,
       isAuthenticated: false,
-      isLoading: false,
+      isLoading: true,
       error: null,
+      hasInitialized: false,
 
       // Ações
       login: async (data: LoginData) => {
@@ -100,11 +102,6 @@ export const useAuthStore = create<AuthStore>()(
           return;
         }
 
-        const currentState = get();
-        if (currentState.isLoading) {
-          return;
-        }
-
         set({ isLoading: true });
         try {
           const user = await authService.getCurrentUser();
@@ -139,23 +136,43 @@ export const useAuthStore = create<AuthStore>()(
       // 🛡️ Inicializar o estado da autenticação
       initialize: async () => {
         const state = get();
-        
+
+        if (state.hasInitialized) {
+          if (state.isLoading) {
+            set({ isLoading: false });
+          }
+          return;
+        }
+
+        // Evita executar no lado do servidor
+        if (typeof window === 'undefined') {
+          return;
+        }
+
+        set({ isLoading: true });
+
         // 🛡️ Se não há access token no localStorage, limpa o estado
         if (!authService.isAuthenticated()) {
-          if (state.isAuthenticated || state.user) {
-            set({
-              user: null,
-              isAuthenticated: false,
-              isLoading: false,
-              error: null,
-            });
-          }
+          set({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            error: null,
+            hasInitialized: true,
+          });
           return;
         }
         
         // 🛡️ Se há access token mas não há usuário no estado, busca o usuário
         if (authService.isAuthenticated() && !state.user) {
-          await state.getCurrentUser();
+          try {
+            await state.getCurrentUser();
+            set({ hasInitialized: true, isLoading: false });
+          } catch {
+            set({ hasInitialized: true });
+          }
+        } else {
+          set({ isLoading: false, hasInitialized: true });
         }
       },
     }),
