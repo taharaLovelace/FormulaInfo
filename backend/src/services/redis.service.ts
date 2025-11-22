@@ -11,7 +11,6 @@ class RedisService {
       host: config.redis.host,
       port: config.redis.port,
       password: config.redis.password,
-      retryDelayOnFailover: 100,
       lazyConnect: true,
       maxRetriesPerRequest: 3,
     });

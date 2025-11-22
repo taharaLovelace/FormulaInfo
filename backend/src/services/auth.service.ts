@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { sign, verify } from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { config } from '../config/config';
 import { redisService } from './redis.service';
@@ -20,6 +20,24 @@ export interface RefreshTokenPayload {
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
+}
+
+// 🛡️ Interface para usuário seguro (sem dados sensíveis)
+export interface SafeUser {
+  id: string;
+  username: string;
+  email: string;
+  name: string;
+  isActive: boolean;
+  emailVerified: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// 🛡️ Interface para resposta de autenticação segura
+export interface SafeAuthResponse {
+  user: SafeUser;
+  tokens: AuthTokens;
 }
 
 export interface UserRegistrationData {
@@ -53,31 +71,55 @@ class AuthService {
     return bcrypt.compare(password, hashedPassword);
   }
 
+  // 🛡️ Converter User em SafeUser (sem dados sensíveis)
+  public toSafeUser(user: any): SafeUser {
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      name: user.name,
+      isActive: user.isActive,
+      emailVerified: user.emailVerified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  }
+
   // Generate JWT tokens
   async generateTokens(userId: string, username: string, email: string): Promise<AuthTokens> {
     const jti = `${userId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const refreshTokenId = `${userId}_refresh_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+    const jwtSecret = process.env.JWT_SECRET || config.jwt.secret;
+    const jwtExpiresIn = process.env.JWT_EXPIRES_IN || config.jwt.expiresIn;
+    const jwtRefreshExpiresIn = process.env.JWT_REFRESH_EXPIRES_IN || config.jwt.refreshExpiresIn;
+    
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET não configurado');
+    }
+
     // Access Token (short-lived)
-    const accessToken = jwt.sign(
+    // @ts-ignore - JWT types issue
+    const accessToken = sign(
       { 
         userId, 
         username, 
         email, 
         jti 
       },
-      config.jwt.secret,
-      { expiresIn: config.jwt.expiresIn }
+      jwtSecret,
+      { expiresIn: jwtExpiresIn }
     );
 
     // Refresh Token (long-lived)
-    const refreshToken = jwt.sign(
+    // @ts-ignore - JWT types issue
+    const refreshToken = sign(
       { 
         userId, 
         tokenId: refreshTokenId 
       },
-      config.jwt.secret,
-      { expiresIn: config.jwt.refreshExpiresIn }
+      jwtSecret,
+      { expiresIn: jwtRefreshExpiresIn }
     );
 
     // Store refresh token in Redis
@@ -88,7 +130,7 @@ class AuthService {
   }
 
   // Register new user
-  async register(userData: UserRegistrationData): Promise<{ user: any; tokens: AuthTokens }> {
+  async register(userData: UserRegistrationData): Promise<SafeAuthResponse> {
     // Check if user already exists
     const existingUser = await this.prisma.user.findFirst({
       where: {
@@ -122,19 +164,19 @@ class AuthService {
       }
     });
 
-    // Get created user with relationships
-    const userWithRelations = await this.getUserById(user.id);
-
     // Generate tokens
     const tokens = await this.generateTokens(user.id, user.username, user.email);
 
+    // 🛡️ Retornar apenas dados seguros do usuário
+    const safeUser = this.toSafeUser(user);
+
     logger.info(`Novo usuário registrado: ${user.username} (${user.email})`);
 
-    return { user: userWithRelations, tokens };
+    return { user: safeUser, tokens };
   }
 
   // Login user
-  async login(loginData: UserLoginData): Promise<{ user: any; tokens: AuthTokens }> {
+  async login(loginData: UserLoginData): Promise<SafeAuthResponse> {
     // Find user by email or username
     const user = await this.prisma.user.findFirst({
       where: {
@@ -155,22 +197,22 @@ class AuthService {
       throw new Error('Credenciais inválidas');
     }
 
-    // Get user with relationships
-    const userWithRelations = await this.getUserById(user.id);
-
     // Generate new tokens
     const tokens = await this.generateTokens(user.id, user.username, user.email);
 
+    // 🛡️ Retornar apenas dados seguros do usuário
+    const safeUser = this.toSafeUser(user);
+
     logger.info(`Usuário logado: ${user.username} (${user.email})`);
 
-    return { user: userWithRelations, tokens };
+    return { user: safeUser, tokens };
   }
 
   // Refresh access token
   async refreshToken(refreshToken: string): Promise<AuthTokens> {
     try {
       // Verify refresh token
-      const payload = jwt.verify(refreshToken, config.jwt.secret) as RefreshTokenPayload;
+      const payload = verify(refreshToken, config.jwt.secret) as RefreshTokenPayload;
       
       // Check if refresh token exists in Redis
       const storedToken = await redisService.getRefreshToken(payload.userId);
@@ -223,7 +265,7 @@ class AuthService {
   // Verify access token
   async verifyAccessToken(token: string): Promise<JwtPayload> {
     try {
-      const payload = jwt.verify(token, config.jwt.secret) as JwtPayload;
+      const payload = verify(token, config.jwt.secret) as JwtPayload;
       
       // Check if token is blacklisted
       if (payload.jti && await redisService.isTokenBlacklisted(payload.jti)) {
@@ -239,15 +281,15 @@ class AuthService {
   // Verify refresh token
   async verifyRefreshToken(token: string): Promise<RefreshTokenPayload> {
     try {
-      const payload = jwt.verify(token, config.jwt.secret) as RefreshTokenPayload;
+      const payload = verify(token, config.jwt.secret) as RefreshTokenPayload;
       return payload;
     } catch (error) {
       throw new Error('Refresh token inválido');
     }
   }
 
-  // Get user by ID
-  async getUserById(userId: string): Promise<any> {
+  // 🛡️ Get user by ID (dados seguros apenas)
+  async getUserById(userId: string): Promise<SafeUser> {
     const user = await this.prisma.user.findUnique({
       where: { 
         id: userId
@@ -257,11 +299,6 @@ class AuthService {
         username: true,
         email: true,
         name: true,
-        birthDate: true,
-        favoriteTeamId: true,
-        favoriteDriverId: true,
-        favoriteTeam: true,
-        favoriteDriver: true,
         emailVerified: true,
         isActive: true,
         createdAt: true,
@@ -273,7 +310,7 @@ class AuthService {
       throw new Error('Usuário não encontrado');
     }
 
-    return user;
+    return this.toSafeUser(user);
   }
 
   // Helper method to parse time strings to seconds

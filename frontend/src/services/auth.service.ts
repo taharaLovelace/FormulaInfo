@@ -41,52 +41,62 @@ export interface RegisterData {
   favoriteDriverId?: number;
 }
 
+// 🛡️ Resposta segura do backend (sem refresh token no JSON)
 export interface AuthResponse {
   user: User;
-  tokens: {
-    accessToken: string;
-    refreshToken: string;
-  };
+  message: string;
+  // 🛡️ Nota: refresh tokens vêm apenas via cookies HttpOnly
 }
 
+// 🛡️ Resposta segura do refresh (apenas access token no JSON)
 export interface RefreshResponse {
   accessToken: string;
-  refreshToken: string;
+  message: string;
+  // 🛡️ Nota: refresh token atualizado vem apenas via cookie HttpOnly
 }
 
 class AuthService {
-  // Registrar novo usuário
+  // 🛡️ Registrar novo usuário (versão segura)
   async register(data: RegisterData): Promise<AuthResponse> {
+    // 🛡️ Primeiro faz o registro - o servidor define cookies HttpOnly automaticamente
     const response = await api.post<AuthResponse>('/auth/register', data);
     
-    // Salva o access token no localStorage
-    if (response.data.tokens.accessToken) {
-      localStorage.setItem('accessToken', response.data.tokens.accessToken);
+    // 🛡️ Agora precisa obter o access token via refresh (já que temos o refresh cookie)
+    const refreshResponse = await api.post<RefreshResponse>('/auth/refresh');
+    
+    // 🛡️ Salva apenas o access token no localStorage
+    if (refreshResponse.data.accessToken) {
+      localStorage.setItem('accessToken', refreshResponse.data.accessToken);
     }
     
     return response.data;
   }
 
-  // Fazer login
+  // 🛡️ Fazer login (versão segura)
   async login(data: LoginData): Promise<AuthResponse> {
+    // 🛡️ Primeiro faz o login - o servidor define cookies HttpOnly automaticamente
     const response = await api.post<AuthResponse>('/auth/login', data);
     
-    // Salva o access token no localStorage
-    if (response.data.tokens.accessToken) {
-      localStorage.setItem('accessToken', response.data.tokens.accessToken);
+    // 🛡️ Agora precisa obter o access token via refresh (já que temos o refresh cookie)
+    const refreshResponse = await api.post<RefreshResponse>('/auth/refresh');
+    
+    // 🛡️ Salva apenas o access token no localStorage
+    if (refreshResponse.data.accessToken) {
+      localStorage.setItem('accessToken', refreshResponse.data.accessToken);
     }
     
     return response.data;
   }
 
-  // Fazer logout
+  // 🛡️ Fazer logout (versão segura)
   async logout(): Promise<void> {
     try {
+      // 🛡️ O servidor limpa os cookies HttpOnly automaticamente
       await api.post('/auth/logout');
     } catch (error) {
       // Ignora erros de logout
     } finally {
-      // Remove o token do localStorage independente do resultado
+      // 🛡️ Remove apenas o access token do localStorage
       localStorage.removeItem('accessToken');
     }
   }
@@ -97,21 +107,22 @@ class AuthService {
     return response.data;
   }
 
-  // Verificar se está autenticado
+  // 🛡️ Verificar se está autenticado (verifica apenas access token)
   isAuthenticated(): boolean {
     return !!localStorage.getItem('accessToken');
   }
 
-  // Obter token armazenado
+  // 🛡️ Obter access token armazenado
   getToken(): string | null {
     return localStorage.getItem('accessToken');
   }
 
-  // Refresh token (já é feito automaticamente pelo interceptador)
+  // 🛡️ Refresh token (já é feito automaticamente pelo interceptador)
   async refreshToken(): Promise<RefreshResponse> {
+    // 🛡️ O refresh token vem automaticamente via cookie HttpOnly
     const response = await api.post<RefreshResponse>('/auth/refresh');
     
-    // Atualiza o token no localStorage
+    // 🛡️ Atualiza apenas o access token no localStorage
     if (response.data.accessToken) {
       localStorage.setItem('accessToken', response.data.accessToken);
     }

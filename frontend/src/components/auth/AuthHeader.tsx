@@ -12,7 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 import useAuthStore from '../../stores/auth.store';
-import { classNames } from '../../utils/classNames';
+import { clsx } from 'clsx';
 import { useEffect, useState } from 'react';
 
 export default function AuthHeader() {
@@ -100,7 +100,7 @@ export default function AuthHeader() {
             {({ active }) => (
               <Link
                 href="/profile"
-                className={classNames(
+                className={clsx(
                   active ? 'bg-gray-100 dark:bg-gray-700' : '',
                   'flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200'
                 )}
@@ -115,7 +115,7 @@ export default function AuthHeader() {
             {({ active }) => (
               <Link
                 href="/settings"
-                className={classNames(
+                className={clsx(
                   active ? 'bg-gray-100 dark:bg-gray-700' : '',
                   'flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200'
                 )}
@@ -132,7 +132,7 @@ export default function AuthHeader() {
             {({ active }) => (
               <button
                 onClick={handleLogout}
-                className={classNames(
+                className={clsx(
                   active ? 'bg-gray-100 dark:bg-gray-700' : '',
                   'flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200'
                 )}

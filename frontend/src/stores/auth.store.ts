@@ -90,6 +90,7 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       getCurrentUser: async () => {
+        // 🛡️ Verifica se há access token
         if (!authService.isAuthenticated()) {
           set({
             user: null,
@@ -114,7 +115,7 @@ export const useAuthStore = create<AuthStore>()(
             error: null,
           });
         } catch (error: any) {
-          // Se der erro 401, limpa tudo
+          // 🛡️ Se der erro 401, limpa apenas access token (cookies são limpos pelo servidor)
           if (error.response?.status === 401) {
             localStorage.removeItem('accessToken');
           }
@@ -135,11 +136,11 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: loading });
       },
 
-      // Inicializar o estado da autenticação
+      // 🛡️ Inicializar o estado da autenticação
       initialize: async () => {
         const state = get();
         
-        // Se não há token no localStorage, limpa o estado
+        // 🛡️ Se não há access token no localStorage, limpa o estado
         if (!authService.isAuthenticated()) {
           if (state.isAuthenticated || state.user) {
             set({
@@ -152,7 +153,7 @@ export const useAuthStore = create<AuthStore>()(
           return;
         }
         
-        // Se há token mas não há usuário no estado, busca o usuário
+        // 🛡️ Se há access token mas não há usuário no estado, busca o usuário
         if (authService.isAuthenticated() && !state.user) {
           await state.getCurrentUser();
         }
