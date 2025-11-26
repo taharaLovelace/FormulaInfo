@@ -1,5 +1,14 @@
 import api from './api';
 
+// 🛡️ Interface para usuário básico (retornado no login/register)
+export interface BasicUser {
+  id: string;
+  username: string;
+  email: string;
+  name: string;
+}
+
+// 🛡️ Interface para usuário completo (retornado na rota /profile)
 export interface User {
   id: string;
   username: string;
@@ -46,7 +55,7 @@ export interface RegisterData {
 
 // 🛡️ Resposta segura do backend (sem refresh token no JSON)
 export interface AuthResponse {
-  user: User;
+  user: BasicUser;
   message: string;
   // 🛡️ Nota: refresh tokens vêm apenas via cookies HttpOnly
 }
@@ -104,9 +113,15 @@ class AuthService {
     }
   }
 
-  // Obter dados do usuário atual
-  async getCurrentUser(): Promise<User> {
-    const response = await api.get<User>('/auth/me');
+  // Obter dados do usuário atual (básico)
+  async getCurrentUser(): Promise<BasicUser> {
+    const response = await api.get<BasicUser>('/auth/me');
+    return response.data;
+  }
+
+  // 🛡️ Obter dados completos do perfil do usuário
+  async getProfile(): Promise<User> {
+    const response = await api.get<User>('/auth/profile');
     return response.data;
   }
 

@@ -22,7 +22,15 @@ export interface AuthTokens {
   refreshToken: string;
 }
 
-// 🛡️ Interface para usuário seguro (sem dados sensíveis)
+// 🛡️ Interface para usuário básico (retornado no login/register)
+export interface BasicUser {
+  id: string;
+  username: string;
+  email: string;
+  name: string;
+}
+
+// 🛡️ Interface para usuário completo (retornado na rota /profile)
 export interface SafeUser {
   id: string;
   username: string;
@@ -52,7 +60,13 @@ export interface SafeUser {
   updatedAt: Date;
 }
 
-// 🛡️ Interface para resposta de autenticação segura
+// 🛡️ Interface para resposta de autenticação básica (login/register)
+export interface BasicAuthResponse {
+  user: BasicUser;
+  tokens: AuthTokens;
+}
+
+// 🛡️ Interface para resposta de autenticação completa (para compatibilidade)
 export interface SafeAuthResponse {
   user: SafeUser;
   tokens: AuthTokens;
@@ -87,6 +101,16 @@ class AuthService {
   // Verify password
   async verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
     return bcrypt.compare(password, hashedPassword);
+  }
+
+  // 🛡️ Converter User em BasicUser (apenas dados básicos para login/register)
+  public toBasicUser(user: any): BasicUser {
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      name: user.name,
+    };
   }
 
   // 🛡️ Converter User em SafeUser (sem dados sensíveis)
@@ -166,7 +190,7 @@ class AuthService {
   }
 
   // Register new user
-  async register(userData: UserRegistrationData): Promise<SafeAuthResponse> {
+  async register(userData: UserRegistrationData): Promise<BasicAuthResponse> {
     // Check if user already exists
     const existingUser = await this.prisma.user.findFirst({
       where: {
@@ -198,42 +222,21 @@ class AuthService {
         favoriteTeamId: userData.favoriteTeamId,
         favoriteDriverId: userData.favoriteDriverId,
       },
-      include: {
-        favoriteTeam: {
-          select: {
-            id: true,
-            name: true,
-            fullName: true,
-            logoUrl: true,
-            carImageUrl: true,
-            teamColor: true,
-            country: true,
-          }
-        },
-        favoriteDriver: {
-          select: {
-            id: true,
-            fullName: true,
-            driverNumber: true,
-            imageUrl: true,
-          }
-        }
-      }
     });
 
     // Generate tokens
     const tokens = await this.generateTokens(user.id, user.username, user.email);
 
-    // 🛡️ Retornar apenas dados seguros do usuário
-    const safeUser = this.toSafeUser(user);
+    // 🛡️ Retornar apenas dados básicos do usuário
+    const basicUser = this.toBasicUser(user);
 
     logger.info(`Novo usuário registrado: ${user.username} (${user.email})`);
 
-    return { user: safeUser, tokens };
+    return { user: basicUser, tokens };
   }
 
   // Login user
-  async login(loginData: UserLoginData): Promise<SafeAuthResponse> {
+  async login(loginData: UserLoginData): Promise<BasicAuthResponse> {
     // Find user by email or username
     const user = await this.prisma.user.findFirst({
       where: {
@@ -242,27 +245,6 @@ class AuthService {
           { username: loginData.identifier }
         ]
       },
-      include: {
-        favoriteTeam: {
-          select: {
-            id: true,
-            name: true,
-            fullName: true,
-            logoUrl: true,
-            carImageUrl: true,
-            teamColor: true,
-            country: true,
-          }
-        },
-        favoriteDriver: {
-          select: {
-            id: true,
-            fullName: true,
-            driverNumber: true,
-            imageUrl: true,
-          }
-        }
-      }
     });
 
     if (!user || !user.isActive) {
@@ -278,12 +260,12 @@ class AuthService {
     // Generate new tokens
     const tokens = await this.generateTokens(user.id, user.username, user.email);
 
-    // 🛡️ Retornar apenas dados seguros do usuário
-    const safeUser = this.toSafeUser(user);
+    // 🛡️ Retornar apenas dados básicos do usuário
+    const basicUser = this.toBasicUser(user);
 
     logger.info(`Usuário logado: ${user.username} (${user.email})`);
 
-    return { user: safeUser, tokens };
+    return { user: basicUser, tokens };
   }
 
   // Refresh access token

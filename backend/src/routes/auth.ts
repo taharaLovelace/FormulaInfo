@@ -213,7 +213,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // 🛡️ Get current user (protected route)
+  // 🛡️ Get current user (protected route) - dados básicos
   server.get('/me', async (request, reply) => {
     try {
       const authHeader = request.headers.authorization;
@@ -228,7 +228,31 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const payload = await authService.verifyAccessToken(accessToken);
       const user = await authService.getUserById(payload.userId);
 
-      // 🛡️ Retornar apenas dados seguros do usuário
+      // 🛡️ Retornar apenas dados básicos do usuário
+      reply.send(authService.toBasicUser(user));
+    } catch (error: any) {
+      reply.code(401).send({
+        message: error.message || 'Token inválido'
+      });
+    }
+  });
+
+  // 🛡️ Get user profile (protected route) - dados completos com preferências
+  server.get('/profile', async (request, reply) => {
+    try {
+      const authHeader = request.headers.authorization;
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return reply.code(401).send({
+          message: 'Token de acesso não fornecido'
+        });
+      }
+
+      const accessToken = authHeader.slice(7);
+      const payload = await authService.verifyAccessToken(accessToken);
+      const user = await authService.getUserById(payload.userId);
+
+      // 🛡️ Retornar todos os dados do usuário (com favoritos)
       reply.send(authService.toSafeUser(user));
     } catch (error: any) {
       reply.code(401).send({

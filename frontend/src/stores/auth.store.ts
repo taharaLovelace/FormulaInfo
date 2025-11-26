@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import authService, { User, LoginData, RegisterData } from '../services/auth.service';
+import authService, { BasicUser, User, LoginData, RegisterData } from '../services/auth.service';
 
 interface AuthState {
-  user: User | null;
+  user: BasicUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -15,6 +15,7 @@ interface AuthActions {
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   getCurrentUser: () => Promise<void>;
+  getProfile: () => Promise<User>;
   clearError: () => void;
   setLoading: (loading: boolean) => void;
   initialize: () => Promise<void>;
@@ -123,6 +124,17 @@ export const useAuthStore = create<AuthStore>()(
             error: error.response?.data?.message || 'Erro ao obter dados do usuário',
           });
         }
+      },
+
+      // 🛡️ Obter dados completos do perfil (com favoritos)
+      getProfile: async () => {
+        // 🛡️ Verifica se há access token
+        if (!authService.isAuthenticated()) {
+          throw new Error('Usuário não autenticado');
+        }
+
+        const profile = await authService.getProfile();
+        return profile;
       },
 
       clearError: () => {

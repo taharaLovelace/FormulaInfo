@@ -1,10 +1,62 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import useAuthStore from '../../stores/auth.store';
+import { User } from '../../services/auth.service';
 
 export default function ProfilePage() {
-  const { user } = useAuthStore();
+  const { getProfile } = useAuthStore();
+  const [profile, setProfile] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadProfile();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadProfile = async () => {
+    try {
+      setLoading(true);
+      const userProfile = await getProfile();
+      setProfile(userProfile);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erro ao carregar perfil');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <ProtectedRoute>
+        <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+            <span className="ml-2 text-gray-600">Carregando perfil...</span>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
+  if (error) {
+    return (
+      <ProtectedRoute>
+        <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+          <div className="bg-red-50 p-4 rounded-md">
+            <p className="text-red-700">{error}</p>
+            <button 
+              onClick={loadProfile}
+              className="mt-2 text-red-600 hover:text-red-800 underline"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
 
   return (
     <ProtectedRoute>
@@ -19,28 +71,28 @@ export default function ProfilePage() {
             <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
               <div>
                 <dt className="text-sm font-medium text-gray-500">Nome</dt>
-                <dd className="mt-1 text-sm text-gray-900">{user?.name}</dd>
+                <dd className="mt-1 text-sm text-gray-900">{profile?.name}</dd>
               </div>
               
               <div>
                 <dt className="text-sm font-medium text-gray-500">Nome de usuário</dt>
-                <dd className="mt-1 text-sm text-gray-900">@{user?.username}</dd>
+                <dd className="mt-1 text-sm text-gray-900">@{profile?.username}</dd>
               </div>
               
               <div>
                 <dt className="text-sm font-medium text-gray-500">Email</dt>
-                <dd className="mt-1 text-sm text-gray-900">{user?.email}</dd>
+                <dd className="mt-1 text-sm text-gray-900">{profile?.email}</dd>
               </div>
               
               <div>
                 <dt className="text-sm font-medium text-gray-500">Status da conta</dt>
                 <dd className="mt-1">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    user?.isActive 
+                    profile?.isActive 
                       ? 'bg-green-100 text-green-800' 
                       : 'bg-red-100 text-red-800'
                   }`}>
-                    {user?.isActive ? 'Ativa' : 'Inativa'}
+                    {profile?.isActive ? 'Ativa' : 'Inativa'}
                   </span>
                 </dd>
               </div>
@@ -49,11 +101,11 @@ export default function ProfilePage() {
                 <dt className="text-sm font-medium text-gray-500">Email verificado</dt>
                 <dd className="mt-1">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    user?.emailVerified 
+                    profile?.emailVerified 
                       ? 'bg-green-100 text-green-800' 
                       : 'bg-yellow-100 text-yellow-800'
                   }`}>
-                    {user?.emailVerified ? 'Verificado' : 'Pendente'}
+                    {profile?.emailVerified ? 'Verificado' : 'Pendente'}
                   </span>
                 </dd>
               </div>
@@ -61,8 +113,8 @@ export default function ProfilePage() {
               <div>
                 <dt className="text-sm font-medium text-gray-500">Data de nascimento</dt>
                 <dd className="mt-1 text-sm text-gray-900">
-                  {user?.birthDate 
-                    ? new Date(user.birthDate).toLocaleDateString('pt-BR') 
+                  {profile?.birthDate 
+                    ? new Date(profile.birthDate).toLocaleDateString('pt-BR') 
                     : 'Não informado'
                   }
                 </dd>
@@ -71,8 +123,8 @@ export default function ProfilePage() {
               <div className="sm:col-span-2">
                 <dt className="text-sm font-medium text-gray-500">Membro desde</dt>
                 <dd className="mt-1 text-sm text-gray-900">
-                  {user?.createdAt 
-                    ? new Date(user.createdAt).toLocaleDateString('pt-BR', {
+                  {profile?.createdAt 
+                    ? new Date(profile.createdAt).toLocaleDateString('pt-BR', {
                         day: '2-digit',
                         month: 'long',
                         year: 'numeric'
@@ -106,14 +158,14 @@ export default function ProfilePage() {
               <div>
                 <dt className="text-sm font-medium text-gray-500">Equipe favorita</dt>
                 <dd className="mt-1 text-sm text-gray-900">
-                  {user?.favoriteTeam?.name || 'Nenhuma selecionada'}
+                  {profile?.favoriteTeam?.name || 'Nenhuma selecionada'}
                 </dd>
               </div>
               
               <div>
                 <dt className="text-sm font-medium text-gray-500">Piloto favorito</dt>
                 <dd className="mt-1 text-sm text-gray-900">
-                  {user?.favoriteDriver?.fullName || 'Nenhum selecionado'}
+                  {profile?.favoriteDriver?.fullName || 'Nenhum selecionado'}
                 </dd>
               </div>
             </dl>
