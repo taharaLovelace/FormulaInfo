@@ -1,10 +1,24 @@
+/**
+ * @fileoverview Configuração centralizada da aplicação
+ * @description Este módulo carrega e valida as variáveis de ambiente,
+ * exportando um objeto de configuração tipado para uso em toda a aplicação.
+ * 
+ * @module config
+ * @requires dotenv
+ * @requires zod
+ */
+
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
-// Load environment variables
+// Carrega variáveis de ambiente do arquivo .env
 dotenv.config();
 
-// Environment validation schema
+/**
+ * Schema de validação das variáveis de ambiente
+ * Utiliza Zod para garantir que todas as variáveis obrigatórias
+ * estejam presentes e com os tipos corretos
+ */
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.string().transform(Number).default('3001'),
@@ -21,9 +35,24 @@ const envSchema = z.object({
   LOG_FILE: z.string().default('logs/app.log')
 });
 
-// Validate environment variables
+// Valida as variáveis de ambiente
 const env = envSchema.parse(process.env);
 
+/**
+ * Objeto de configuração da aplicação
+ * @constant
+ * @type {Object}
+ * 
+ * @property {string} nodeEnv - Ambiente de execução (development, production, test)
+ * @property {number} port - Porta do servidor HTTP
+ * @property {Object} database - Configurações do banco de dados
+ * @property {Object} jwt - Configurações de autenticação JWT
+ * @property {Object} redis - Configurações do Redis
+ * @property {Object} api - Configurações da API
+ * @property {Object} rateLimit - Configurações de rate limiting
+ * @property {Object} cors - Configurações de CORS
+ * @property {Object} logging - Configurações de logging
+ */
 export const config = {
   nodeEnv: env.NODE_ENV,
   port: env.PORT,

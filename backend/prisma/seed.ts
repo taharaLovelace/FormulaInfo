@@ -1,10 +1,34 @@
+/**
+ * @fileoverview Script de Seed do Banco de Dados
+ * @description Script de população inicial do banco de dados com dados das equipes
+ * e pilotos da temporada 2025 de Fórmula 1. Utiliza upsert para permitir
+ * execuções repetidas sem duplicar dados.
+ * 
+ * @usage npx prisma db seed
+ */
+
 import { PrismaClient } from '@prisma/client';
 
+/** Cliente Prisma para operações no banco de dados */
 const prisma = new PrismaClient();
 
+/**
+ * Função principal de seed do banco de dados.
+ * 
+ * @description Popula o banco de dados com:
+ * - 10 equipes da temporada 2025 de F1 com logos, imagens de carros e cores
+ * - 20 pilotos da temporada 2025 com informações detalhadas
+ * 
+ * Utiliza upsert para inserir novos registros ou atualizar existentes,
+ * permitindo execuções seguras múltiplas vezes.
+ */
 async function main() {
   console.log('Seeding teams...');
 
+  /**
+   * Dados das equipes de F1 para a temporada 2025.
+   * Cada equipe inclui informações de branding e histórico.
+   */
   const teams = [
     {
       name: 'Red Bull Racing',
@@ -128,7 +152,7 @@ async function main() {
     }
   ];
 
-  // Criar equipes
+  // Criar/atualizar equipes no banco de dados usando upsert
   for (const teamData of teams) {
     try {
       await prisma.team.upsert({
@@ -145,6 +169,10 @@ async function main() {
   console.log('Teams seeded successfully');
   console.log('Seeding drivers...');
 
+  /**
+   * Dados dos pilotos de F1 para a temporada 2025.
+   * Inclui número, nome completo, nacionalidade, equipe e biografia.
+   */
   const drivers = [
     {
       driverNumber: 1,
@@ -368,6 +396,7 @@ async function main() {
     },
   ];
 
+  // Criar/atualizar pilotos no banco de dados usando upsert
   for (const driver of drivers) {
     await prisma.driver.upsert({
       where: { driverNumber: driver.driverNumber },
@@ -379,11 +408,13 @@ async function main() {
   console.log('Drivers seeded successfully');
 }
 
+// Execução principal do seed
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('Erro ao executar seed:', e);
     process.exit(1);
   })
   .finally(async () => {
+    // Desconecta do banco de dados ao finalizar
     await prisma.$disconnect();
   });

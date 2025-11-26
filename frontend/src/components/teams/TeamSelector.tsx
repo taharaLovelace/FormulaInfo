@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Componente seletor de equipe favorita
+ * @description Grid de cards para seleção de equipe favorita do usuário.
+ * Permite visualizar todas as equipes e selecionar uma como favorita.
+ * 
+ * @module components/teams/TeamSelector
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -5,22 +13,54 @@ import { teamsApiService, Team } from '../../services/teams.service';
 import { toast } from 'react-hot-toast';
 import useAuthStore from '../../stores/auth.store';
 
-// Equipes que têm logos com cores escuras (não precisam do filtro brightness-0)
+// ==================== CONSTANTES ====================
+
+/**
+ * Equipes cujos logos possuem cores escuras
+ * Estas NÃO recebem o filtro brightness-0 para manter visibilidade
+ * @constant
+ */
 const darkLogoTeams = ['Ferrari', 'Kick Sauber'];
 
+// ==================== COMPONENTE ====================
+
+/**
+ * Componente seletor de equipe favorita
+ * 
+ * @description Renderiza um grid de cards com todas as equipes:
+ * - Carrega equipes e preferências do usuário
+ * - Permite selecionar ou remover equipe favorita
+ * - Exibe logo, nome, país e imagem do carro
+ * - Feedback visual de seleção e loading
+ * 
+ * @returns {JSX.Element} Grid de cards de equipes selecionáveis
+ * 
+ * @example
+ * // Na página de preferências
+ * <TeamSelector />
+ */
 export default function TeamSelector() {
+  /** Lista de equipes carregadas */
   const [teams, setTeams] = useState<Team[]>([]);
+  /** ID da equipe atualmente selecionada */
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+  /** Estado de carregamento inicial */
   const [loading, setLoading] = useState(true);
+  /** Estado de atualização em andamento */
   const [updating, setUpdating] = useState(false);
   
   const { user } = useAuthStore();
 
+  // Carrega dados iniciais
   useEffect(() => {
     loadTeams();
     loadUserPreferences();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * Carrega lista de equipes da API
+   * @async
+   */
   const loadTeams = async () => {
     try {
       const teamsData = await teamsApiService.getAllTeams();
@@ -31,6 +71,10 @@ export default function TeamSelector() {
     }
   };
 
+  /**
+   * Carrega preferências do usuário logado
+   * @async
+   */
   const loadUserPreferences = async () => {
     try {
       if (user) {
@@ -44,6 +88,12 @@ export default function TeamSelector() {
     }
   };
 
+  /**
+   * Handler de seleção de equipe
+   * Atualiza a preferência no backend e estado local
+   * @param {number | null} teamId - ID da equipe ou null para remover
+   * @async
+   */
   const handleTeamSelect = async (teamId: number | null) => {
     setUpdating(true);
     try {
@@ -52,9 +102,6 @@ export default function TeamSelector() {
       
       const teamName = teamId ? teams.find(t => t.id === teamId)?.name : 'Nenhuma';
       toast.success(`Equipe favorita atualizada: ${teamName}`);
-      
-      // Recarregar dados do usuário para atualizar o store
-      // Você pode disparar um refresh do usuário aqui se necessário
     } catch (error) {
       console.error('Erro ao atualizar equipe favorita:', error);
       toast.error('Erro ao atualizar equipe favorita');
@@ -63,6 +110,7 @@ export default function TeamSelector() {
     }
   };
 
+  // Exibe loading durante carregamento inicial
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">

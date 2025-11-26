@@ -1,6 +1,14 @@
+/**
+ * @fileoverview Componente de header de autenticação
+ * @description Exibe informações do usuário logado ou botões de login/registro.
+ * Inclui menu dropdown com opções do usuário.
+ * 
+ * @module components/auth/AuthHeader
+ */
+
 'use client';
 
-import { Fragment } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Menu, Transition } from '@headlessui/react';
 import { 
@@ -13,12 +21,34 @@ import {
 import { toast } from 'react-hot-toast';
 import useAuthStore from '../../stores/auth.store';
 import { clsx } from 'clsx';
-import { useEffect, useState } from 'react';
 
+// ==================== COMPONENTE ====================
+
+/**
+ * Componente de header de autenticação
+ * 
+ * @description Renderiza condicionalmente:
+ * - Botões de login/registro quando não autenticado
+ * - Menu dropdown com nome do usuário quando autenticado
+ * 
+ * Inclui tratamento de hidratação para evitar mismatch SSR/CSR
+ * 
+ * @returns {JSX.Element} Header de autenticação responsivo
+ * 
+ * @example
+ * // Uso no layout principal
+ * <AuthHeader />
+ */
 export default function AuthHeader() {
   const { user, isAuthenticated, logout, isLoading } = useAuthStore();
+  
+  // Estado para controlar hidratação e evitar mismatch SSR/CSR
   const [isHydrated, setIsHydrated] = useState(false);
 
+  /**
+   * Efeito de hidratação
+   * Aguarda montagem do componente antes de renderizar conteúdo dinâmico
+   */
   useEffect(() => {
     // Marca como hidratado após um pequeno delay
     const timer = setTimeout(() => {
@@ -36,15 +66,20 @@ export default function AuthHeader() {
     };
   }, []);
 
+  /**
+   * Handler de logout do usuário
+   * Executa logout e exibe notificação
+   */
   const handleLogout = async () => {
     try {
       await logout();
       toast.success('Logout realizado com sucesso!');
-    } catch (error) {
+    } catch {
       toast.error('Erro ao fazer logout');
     }
   };
 
+  // Exibe loading durante hidratação ou carregamento
   if (!isHydrated || isLoading) {
     return (
       <div className="flex items-center">
@@ -53,6 +88,7 @@ export default function AuthHeader() {
     );
   }
 
+  // Renderiza botões de login/registro para usuário não autenticado
   if (!isAuthenticated) {
     return (
       <div className="flex items-center space-x-4">
@@ -73,6 +109,7 @@ export default function AuthHeader() {
     );
   }
 
+  // Renderiza menu dropdown para usuário autenticado
   return (
     <Menu as="div" className="relative">
       <Menu.Button className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
@@ -96,6 +133,7 @@ export default function AuthHeader() {
         leaveTo="transform opacity-0 scale-95"
       >
         <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white dark:bg-gray-800 py-1 shadow-lg ring-1 ring-black ring-opacity-5 dark:ring-white dark:ring-opacity-10 focus:outline-none">
+          {/* Link para perfil */}
           <Menu.Item>
             {({ active }) => (
               <Link
@@ -111,6 +149,7 @@ export default function AuthHeader() {
             )}
           </Menu.Item>
           
+          {/* Link para configurações */}
           <Menu.Item>
             {({ active }) => (
               <Link
@@ -128,6 +167,7 @@ export default function AuthHeader() {
           
           <hr className="my-1" />
           
+          {/* Botão de logout */}
           <Menu.Item>
             {({ active }) => (
               <button

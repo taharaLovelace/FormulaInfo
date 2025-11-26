@@ -1,30 +1,65 @@
+/**
+ * @fileoverview Rotas de autenticação
+ * @description Endpoints para registro, login, logout, refresh token e perfil.
+ * Implementa autenticação JWT com cookies HttpOnly para maior segurança.
+ * 
+ * @module routes/auth
+ */
+
 import { FastifyInstance, FastifyReply } from 'fastify';
 import { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import * as jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { AuthService, AuthTokens } from '../services/auth.service';
+
+// ==================== CONFIGURAÇÃO ====================
 
 const prisma = new PrismaClient();
 const authService = new AuthService(prisma);
 
-// Schemas de validação
+// ==================== SCHEMAS DE VALIDAÇÃO ====================
+
+/**
+ * Schema de validação para registro de usuário
+ * @description Valida todos os campos necessários para criar uma conta
+ */
 const registerSchema = z.object({
+  /** Nome de usuário único (3-20 caracteres, alfanumérico + underscore) */
   username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/),
+  /** Email válido */
   email: z.string().email(),
+  /** Senha (mínimo 8 caracteres) */
   password: z.string().min(8),
+  /** Nome completo (2-100 caracteres) */
   name: z.string().min(2).max(100),
+  /** Data de nascimento opcional (ISO datetime) */
   birthDate: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
+  /** ID da equipe favorita opcional */
   favoriteTeamId: z.number().int().positive().optional(),
+  /** ID do piloto favorito opcional */
   favoriteDriverId: z.number().int().positive().optional()
 });
 
+/**
+ * Schema de validação para login
+ * @description Aceita email ou username como identificador
+ */
 const loginSchema = z.object({
-  identifier: z.string().min(1), // email ou username
+  /** Email ou nome de usuário */
+  identifier: z.string().min(1),
+  /** Senha do usuário */
   password: z.string().min(1)
 });
 
-// 🛡️ Funções para cookies seguros
+// ==================== FUNÇÕES DE COOKIES ====================
+
+/**
+ * Define cookies seguros de autenticação
+ * @param {FastifyReply} reply - Objeto de resposta do Fastify
+ * @param {AuthTokens} tokens - Tokens de acesso e refresh
+ * @description Configura cookies HttpOnly com configurações de segurança
+ * baseadas no ambiente (produção vs desenvolvimento)
+ */
 const setSecureCookies = (reply: FastifyReply, tokens: AuthTokens) => {
   const isProduction = process.env.NODE_ENV === 'production';
   
@@ -49,7 +84,11 @@ const setSecureCookies = (reply: FastifyReply, tokens: AuthTokens) => {
   });
 };
 
-// 🛡️ Função para limpar cookies
+/**
+ * Limpa cookies de autenticação
+ * @param {FastifyReply} reply - Objeto de resposta do Fastify
+ * @description Remove os cookies de access e refresh token
+ */
 const clearAuthCookies = (reply: FastifyReply) => {
   const isProduction = process.env.NODE_ENV === 'production';
   
@@ -70,10 +109,27 @@ const clearAuthCookies = (reply: FastifyReply) => {
   });
 };
 
+// ==================== ROTAS ====================
+
+/**
+ * Registra as rotas de autenticação
+ * @param {FastifyInstance} fastify - Instância do Fastify
+ * 
+ * @description Endpoints disponíveis:
+ * - POST /register - Registrar novo usuário
+ * - POST /login - Autenticar usuário
+ * - POST /refresh - Renovar tokens
+ * - POST /logout - Encerrar sessão
+ * - GET /me - Obter dados básicos do usuário
+ * - GET /profile - Obter perfil completo com preferências
+ */
 export default async function authRoutes(fastify: FastifyInstance) {
   const server = fastify.withTypeProvider<ZodTypeProvider>();
 
-  // 🛡️ Registrar usuário
+  /**
+   * POST /register - Registrar novo usuário
+   * @description Cria uma nova conta e retorna tokens via cookies
+   */
   server.post('/register', {
     schema: {
       body: registerSchema
@@ -83,22 +139,24 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const userData = request.body;
       const result = await authService.register(userData);
       
-      // 🛡️ Definir cookies seguros
+      // Define cookies seguros
       setSecureCookies(reply, result.tokens);
       
-      // 🛡️ Retornar apenas dados do usuário (SEM tokens no JSON)
+      // Retorna apenas dados do usuário (SEM tokens no JSON)
       reply.code(201).send({
         user: result.user,
         message: 'Usuário registrado com sucesso'
       });
-    } catch (error: any) {
-      reply.code(400).send({
-        message: error.message || 'Erro ao registrar usuário'
-      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Erro ao registrar usuário';
+      reply.code(400).send({ message });
     }
   });
 
-  // 🛡️ Login
+  /**
+   * POST /login - Autenticar usuário
+   * @description Valida credenciais e retorna tokens via cookies
+   */
   server.post('/login', {
     schema: {
       body: loginSchema
@@ -108,25 +166,27 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const loginData = request.body;
       const result = await authService.login(loginData);
 
-      // 🛡️ Definir cookies seguros
+      // Define cookies seguros
       setSecureCookies(reply, result.tokens);
 
-      // 🛡️ Retornar apenas dados do usuário (SEM tokens no JSON)
+      // Retorna apenas dados do usuário (SEM tokens no JSON)
       reply.send({
         user: result.user,
         message: 'Login realizado com sucesso'
       });
-    } catch (error: any) {
-      reply.code(401).send({
-        message: error.message || 'Credenciais inválidas'
-      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Credenciais inválidas';
+      reply.code(401).send({ message });
     }
   });
 
-  // 🛡️ Refresh Token
+  /**
+   * POST /refresh - Renovar tokens de autenticação
+   * @description Usa refresh token do cookie para gerar novos tokens
+   */
   server.post('/refresh', async (request, reply) => {
     try {
-      // 🛡️ Obter refresh token apenas do cookie (mais seguro)
+      // Obter refresh token apenas do cookie (mais seguro)
       const refreshToken = request.cookies?.refreshToken;
 
       if (!refreshToken) {
@@ -137,27 +197,29 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
       const newTokens = await authService.refreshToken(refreshToken);
 
-      // 🛡️ Definir novos cookies seguros
+      // Define novos cookies seguros
       setSecureCookies(reply, newTokens);
 
-      // 🛡️ Retornar apenas access token (SEM refresh token no JSON)
+      // Retorna apenas access token (SEM refresh token no JSON)
       reply.send({
         accessToken: newTokens.accessToken,
         message: 'Tokens atualizados com sucesso'
       });
-    } catch (error: any) {
-      // 🛡️ Limpar cookies em caso de erro
+    } catch (error: unknown) {
+      // Limpa cookies em caso de erro
       clearAuthCookies(reply);
-      reply.code(401).send({
-        message: error.message || 'Token de refresh inválido'
-      });
+      const message = error instanceof Error ? error.message : 'Token de refresh inválido';
+      reply.code(401).send({ message });
     }
   });
 
-  // 🛡️ Logout
+  /**
+   * POST /logout - Encerrar sessão do usuário
+   * @description Invalida tokens e limpa cookies de autenticação
+   */
   server.post('/logout', async (request, reply) => {
     try {
-      // 🛡️ Obter access token do cabeçalho Authorization
+      // Obter access token do cabeçalho Authorization
       const authHeader = request.headers.authorization;
       let accessTokenJti: string | undefined;
 
@@ -171,7 +233,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         }
       }
 
-      // 🛡️ Obter user ID do access token ou refresh token
+      // Obter user ID do access token ou refresh token
       const refreshToken = request.cookies?.refreshToken;
       let userId: string | undefined;
 
@@ -198,14 +260,14 @@ export default async function authRoutes(fastify: FastifyInstance) {
         await authService.logout(userId, accessTokenJti);
       }
 
-      // 🛡️ Limpar todos os cookies de autenticação
+      // Limpar todos os cookies de autenticação
       clearAuthCookies(reply);
 
       reply.send({
         message: 'Logout realizado com sucesso'
       });
-    } catch (error: any) {
-      // 🛡️ Sempre limpar cookies mesmo em caso de erro
+    } catch {
+      // Sempre limpar cookies mesmo em caso de erro
       clearAuthCookies(reply);
       reply.code(500).send({
         message: 'Erro ao realizar logout'
@@ -213,7 +275,10 @@ export default async function authRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // 🛡️ Get current user (protected route) - dados básicos
+  /**
+   * GET /me - Obter dados básicos do usuário autenticado
+   * @description Retorna informações básicas do usuário logado
+   */
   server.get('/me', async (request, reply) => {
     try {
       const authHeader = request.headers.authorization;
@@ -228,16 +293,18 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const payload = await authService.verifyAccessToken(accessToken);
       const user = await authService.getUserById(payload.userId);
 
-      // 🛡️ Retornar apenas dados básicos do usuário
+      // Retornar apenas dados básicos do usuário
       reply.send(authService.toBasicUser(user));
-    } catch (error: any) {
-      reply.code(401).send({
-        message: error.message || 'Token inválido'
-      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Token inválido';
+      reply.code(401).send({ message });
     }
   });
 
-  // 🛡️ Get user profile (protected route) - dados completos com preferências
+  /**
+   * GET /profile - Obter perfil completo do usuário
+   * @description Retorna todos os dados do usuário incluindo preferências
+   */
   server.get('/profile', async (request, reply) => {
     try {
       const authHeader = request.headers.authorization;
@@ -252,12 +319,11 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const payload = await authService.verifyAccessToken(accessToken);
       const user = await authService.getUserById(payload.userId);
 
-      // 🛡️ Retornar todos os dados do usuário (com favoritos)
+      // Retornar todos os dados do usuário (com favoritos)
       reply.send(authService.toSafeUser(user));
-    } catch (error: any) {
-      reply.code(401).send({
-        message: error.message || 'Token inválido'
-      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Token inválido';
+      reply.code(401).send({ message });
     }
   });
 }

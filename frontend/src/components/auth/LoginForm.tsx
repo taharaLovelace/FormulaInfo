@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Componente de formulário de login
+ * @description Formulário de autenticação com validação Zod e react-hook-form.
+ * Permite login via email ou username.
+ * 
+ * @module components/auth/LoginForm
+ */
+
 'use client';
 
 import { useState } from 'react';
@@ -10,18 +18,49 @@ import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 import useAuthStore from '../../stores/auth.store';
 
+// ==================== VALIDAÇÃO ====================
+
+/**
+ * Schema de validação do formulário de login
+ * @description Valida campos de identificação (email ou username) e senha
+ */
 const loginSchema = z.object({
+  /** Email ou nome de usuário */
   identifier: z.string().min(1, 'Email ou usuário é obrigatório'),
+  /** Senha do usuário */
   password: z.string().min(1, 'Senha é obrigatória'),
 });
 
+/** Tipo inferido do schema de login */
 type LoginFormData = z.infer<typeof loginSchema>;
 
+// ==================== COMPONENTE ====================
+
+/**
+ * Formulário de login do usuário
+ * 
+ * @description Renderiza um formulário de login com:
+ * - Campo de identificação (email ou username)
+ * - Campo de senha com toggle de visibilidade
+ * - Validação em tempo real
+ * - Feedback visual de erros
+ * - Estado de loading durante submissão
+ * 
+ * @returns {JSX.Element} Formulário de login estilizado
+ * 
+ * @example
+ * // Uso em uma página de login
+ * <LoginForm />
+ */
 export default function LoginForm() {
+  // Estado para controlar visibilidade da senha
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  
+  // Acessa o store de autenticação
   const { login, isLoading, error, clearError } = useAuthStore();
 
+  // Configuração do react-hook-form com validação Zod
   const {
     register,
     handleSubmit,
@@ -30,14 +69,17 @@ export default function LoginForm() {
     resolver: zodResolver(loginSchema),
   });
 
+  /**
+   * Handler de submissão do formulário
+   * @param {LoginFormData} data - Dados validados do formulário
+   */
   const onSubmit = async (data: LoginFormData) => {
     clearError();
     try {
       await login(data);
       toast.success('Login realizado com sucesso!');
-      router.push('/'); // Redireciona para a página inicial
-    } catch (error) {
-      // Não redireciona quando há erro - apenas mostra mensagem
+      router.push('/');
+    } catch {
       toast.error('Erro ao fazer login. Verifique suas credenciais.');
     }
   };

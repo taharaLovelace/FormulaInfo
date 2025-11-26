@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Componente de formulário de registro
+ * @description Formulário de criação de conta com validação completa
+ * usando Zod e react-hook-form.
+ * 
+ * @module components/auth/RegisterForm
+ */
+
 'use client';
 
 import { useState } from 'react';
@@ -10,33 +18,68 @@ import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 import useAuthStore from '../../stores/auth.store';
 
+// ==================== VALIDAÇÃO ====================
+
+/**
+ * Schema de validação do formulário de registro
+ * @description Valida todos os campos necessários para criação de conta
+ * incluindo verificação de correspondência de senhas
+ */
 const registerSchema = z.object({
+  /** Nome de usuário único (3-20 caracteres, alfanumérico + underscore) */
   username: z
     .string()
     .min(3, 'Usuário deve ter pelo menos 3 caracteres')
     .max(20, 'Usuário deve ter no máximo 20 caracteres')
     .regex(/^[a-zA-Z0-9_]+$/, 'Usuário deve conter apenas letras, números e underscore'),
+  /** Email válido */
   email: z.string().email('Email inválido'),
+  /** Senha (mínimo 8 caracteres) */
   password: z.string().min(8, 'Senha deve ter pelo menos 8 caracteres'),
+  /** Confirmação de senha */
   confirmPassword: z.string().min(1, 'Confirmação de senha é obrigatória'),
+  /** Nome completo (2-100 caracteres) */
   name: z
     .string()
     .min(2, 'Nome deve ter pelo menos 2 caracteres')
     .max(100, 'Nome deve ter no máximo 100 caracteres'),
+  /** Data de nascimento opcional */
   birthDate: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'As senhas não coincidem',
   path: ['confirmPassword'],
 });
 
+/** Tipo inferido do schema de registro */
 type RegisterFormData = z.infer<typeof registerSchema>;
 
+// ==================== COMPONENTE ====================
+
+/**
+ * Formulário de registro de novo usuário
+ * 
+ * @description Renderiza um formulário completo de registro com:
+ * - Campos para nome, username, email, data de nascimento
+ * - Campos de senha e confirmação com toggle de visibilidade
+ * - Validação em tempo real com mensagens de erro
+ * - Estado de loading durante submissão
+ * 
+ * @returns {JSX.Element} Formulário de registro estilizado
+ * 
+ * @example
+ * // Uso em uma página de registro
+ * <RegisterForm />
+ */
 export default function RegisterForm() {
+  // Estados para controlar visibilidade das senhas
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const router = useRouter();
+  
+  // Acessa o store de autenticação
   const { register: registerUser, isLoading, error, clearError } = useAuthStore();
 
+  // Configuração do react-hook-form com validação Zod
   const {
     register,
     handleSubmit,
@@ -45,9 +88,14 @@ export default function RegisterForm() {
     resolver: zodResolver(registerSchema),
   });
 
+  /**
+   * Handler de submissão do formulário
+   * @param {RegisterFormData} data - Dados validados do formulário
+   */
   const onSubmit = async (data: RegisterFormData) => {
     clearError();
     try {
+      // Prepara os dados para envio à API
       const registerData = {
         username: data.username,
         email: data.email,
@@ -58,9 +106,8 @@ export default function RegisterForm() {
 
       await registerUser(registerData);
       toast.success('Conta criada com sucesso!');
-      router.push('/'); // Redireciona para a página inicial
-    } catch (error) {
-      // Não redireciona quando há erro - apenas mostra mensagem
+      router.push('/');
+    } catch {
       toast.error('Erro ao criar conta. Tente novamente.');
     }
   };

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Layout Principal da Aplicação
+ * @description Layout raiz do Next.js que define a estrutura base de todas as páginas,
+ * incluindo metadados SEO, fonte, tema e componentes globais (Header e Footer).
+ */
+
 import './globals.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
@@ -5,8 +11,15 @@ import { Providers } from './providers'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 
+/** Configuração da fonte Inter do Google Fonts */
 const inter = Inter({ subsets: ['latin'] })
 
+/**
+ * Metadados globais da aplicação para SEO.
+ * 
+ * @description Configura título, descrição, keywords, Open Graph,
+ * Twitter Cards, robots e verificação do Google.
+ */
 export const metadata: Metadata = {
   title: 'Formula Info - Portal dos Fãs de F1',
   description: 'Seu portal completo de informações sobre Fórmula 1. Estatísticas, perfis de pilotos, histórico de corridas e muito mais.',
@@ -21,6 +34,7 @@ export const metadata: Metadata = {
     telephone: false,
   },
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
+  // Configurações Open Graph para compartilhamento em redes sociais
   openGraph: {
     title: 'Formula Info - Portal dos Fãs de F1',
     description: 'Seu portal completo de informações sobre Fórmula 1',
@@ -37,12 +51,14 @@ export const metadata: Metadata = {
     locale: 'pt_BR',
     type: 'website',
   },
+  // Configurações Twitter Card
   twitter: {
     card: 'summary_large_image',
     title: 'Formula Info - Portal dos Fãs de F1',
     description: 'Seu portal completo de informações sobre Fórmula 1',
     images: ['/images/twitter-image.jpg'],
   },
+  // Configurações de indexação para motores de busca
   robots: {
     index: true,
     follow: true,
@@ -59,6 +75,19 @@ export const metadata: Metadata = {
   },
 }
 
+/**
+ * Layout raiz da aplicação Next.js.
+ * 
+ * @description Define a estrutura HTML base incluindo:
+ * - Tag html com idioma pt-BR e scroll suave
+ * - Body com fonte Inter e suporte a dark mode
+ * - Providers globais (React Query, Toaster, Auth)
+ * - Header e Footer persistentes em todas as páginas
+ * 
+ * @param {Object} props - Props do componente
+ * @param {React.ReactNode} props.children - Conteúdo da página atual
+ * @returns {JSX.Element} Estrutura HTML completa da aplicação
+ */
 export default function RootLayout({
   children,
 }: {

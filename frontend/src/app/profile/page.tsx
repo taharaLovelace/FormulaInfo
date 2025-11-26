@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Página de Perfil do Usuário
+ * @description Página que exibe as informações completas do perfil do usuário autenticado,
+ * incluindo dados pessoais, status da conta e preferências de F1.
+ * Apenas acessível para usuários autenticados através do ProtectedRoute.
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,16 +13,40 @@ import useAuthStore from '../../stores/auth.store';
 import { User } from '../../services/auth.service';
 import Link from 'next/link';
 
+/**
+ * Página de perfil do usuário autenticado.
+ * 
+ * @description Exibe informações detalhadas do perfil incluindo:
+ * - Dados pessoais (nome, username, email, data de nascimento)
+ * - Status da conta (ativa/inativa, email verificado)
+ * - Data de criação da conta
+ * - Preferências de F1 (equipe e piloto favoritos)
+ * 
+ * Gerencia estados de loading e error com feedback visual apropriado.
+ * 
+ * @returns {JSX.Element} Página de perfil com informações do usuário
+ */
 export default function ProfilePage() {
+  // Obtém função de carregamento do perfil do store de autenticação
   const { getProfile } = useAuthStore();
+  
+  // Estado local para armazenar dados do perfil
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Carrega o perfil ao montar o componente
   useEffect(() => {
     loadProfile();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * Carrega os dados do perfil do usuário da API.
+   * 
+   * @description Busca informações completas do perfil incluindo
+   * preferências de F1 (equipe e piloto favoritos).
+   * Atualiza estados de loading e error conforme resultado.
+   */
   const loadProfile = async () => {
     try {
       setLoading(true);
@@ -28,6 +59,7 @@ export default function ProfilePage() {
     }
   };
 
+  // Renderiza estado de loading com spinner
   if (loading) {
     return (
       <ProtectedRoute>
@@ -41,6 +73,7 @@ export default function ProfilePage() {
     );
   }
 
+  // Renderiza estado de erro com opção de retry
   if (error) {
     return (
       <ProtectedRoute>

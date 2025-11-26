@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Componente de cabeçalho principal
+ * @description Header responsivo com navegação, logo e autenticação.
+ * Inclui menu mobile para dispositivos menores.
+ * 
+ * @module components/layout/Header
+ */
+
 'use client'
 
 import Link from 'next/link'
@@ -5,13 +13,40 @@ import { useState } from 'react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import AuthHeader from '../auth/AuthHeader'
 
+// ==================== CONFIGURAÇÃO ====================
+
+/**
+ * Links de navegação principal
+ * @constant
+ */
 const navigation = [
   { name: 'Início', href: '/' },
   { name: 'Pilotos', href: '/drivers' },
   { name: 'Equipes', href: '/teams' },
 ]
 
+// ==================== COMPONENTE ====================
+
+/**
+ * Componente de cabeçalho da aplicação
+ * 
+ * @description Header responsivo que inclui:
+ * - Logo clicável (redireciona para home)
+ * - Links de navegação (desktop)
+ * - Menu hambúrguer (mobile)
+ * - Componente de autenticação (login/perfil)
+ * 
+ * O header é sticky (fixo no topo) e possui z-index alto
+ * para permanecer acima de outros elementos.
+ * 
+ * @returns {JSX.Element} Header responsivo
+ * 
+ * @example
+ * // No layout principal
+ * <Header />
+ */
 export function Header() {
+  /** Estado para controlar abertura do menu mobile */
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (

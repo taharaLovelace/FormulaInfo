@@ -1,3 +1,15 @@
+/**
+ * @fileoverview Serviço de autenticação e gerenciamento de usuários
+ * @description Este módulo implementa toda a lógica de autenticação,
+ * incluindo registro, login, logout, refresh de tokens e validação.
+ * Utiliza JWT para tokens e Redis para armazenamento de refresh tokens.
+ * 
+ * @module auth.service
+ * @requires bcryptjs
+ * @requires jsonwebtoken
+ * @requires @prisma/client
+ */
+
 import bcrypt from 'bcryptjs';
 import { sign, verify } from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
@@ -5,24 +17,43 @@ import { config } from '../config/config';
 import { redisService } from './redis.service';
 import { logger } from '../utils/logger';
 
+// ==================== INTERFACES ====================
+
+/**
+ * Payload do JWT de acesso
+ * @interface JwtPayload
+ */
 export interface JwtPayload {
   userId: string;
   username: string;
   email: string;
-  jti?: string; // JWT ID for tracking
+  /** JWT ID para rastreamento e invalidação */
+  jti?: string;
 }
 
+/**
+ * Payload do refresh token
+ * @interface RefreshTokenPayload
+ */
 export interface RefreshTokenPayload {
   userId: string;
   tokenId: string;
 }
 
+/**
+ * Par de tokens de autenticação
+ * @interface AuthTokens
+ */
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
 }
 
-// 🛡️ Interface para usuário básico (retornado no login/register)
+/**
+ * Dados básicos do usuário (retornado no login/register)
+ * Não inclui informações sensíveis
+ * @interface BasicUser
+ */
 export interface BasicUser {
   id: string;
   username: string;
@@ -30,7 +61,11 @@ export interface BasicUser {
   name: string;
 }
 
-// 🛡️ Interface para usuário completo (retornado na rota /profile)
+/**
+ * Dados completos do usuário (retornado na rota /profile)
+ * Inclui preferências e informações detalhadas
+ * @interface SafeUser
+ */
 export interface SafeUser {
   id: string;
   username: string;
@@ -60,18 +95,28 @@ export interface SafeUser {
   updatedAt: Date;
 }
 
-// 🛡️ Interface para resposta de autenticação básica (login/register)
+/**
+ * Resposta de autenticação básica (login/register)
+ * @interface BasicAuthResponse
+ */
 export interface BasicAuthResponse {
   user: BasicUser;
   tokens: AuthTokens;
 }
 
-// 🛡️ Interface para resposta de autenticação completa (para compatibilidade)
+/**
+ * Resposta de autenticação completa (para compatibilidade)
+ * @interface SafeAuthResponse
+ */
 export interface SafeAuthResponse {
   user: SafeUser;
   tokens: AuthTokens;
 }
 
+/**
+ * Dados para registro de novo usuário
+ * @interface UserRegistrationData
+ */
 export interface UserRegistrationData {
   username: string;
   email: string;
@@ -82,28 +127,58 @@ export interface UserRegistrationData {
   favoriteDriverId?: number;
 }
 
+/**
+ * Dados para login
+ * @interface UserLoginData
+ */
 export interface UserLoginData {
-  identifier: string; // email ou username
+  /** Email ou username */
+  identifier: string;
   password: string;
 }
 
+/**
+ * Serviço principal de autenticação
+ * @class AuthService
+ */
 class AuthService {
+  /**
+   * Cria uma instância do AuthService
+   * @param {PrismaClient} prisma - Cliente Prisma para operações de banco
+   */
   constructor(
     private prisma: PrismaClient
   ) {}
 
-  // Hash password
+  // ==================== MÉTODOS DE SENHA ====================
+
+  /**
+   * Gera hash de uma senha usando bcrypt
+   * @param {string} password - Senha em texto plano
+   * @returns {Promise<string>} Hash da senha
+   */
   async hashPassword(password: string): Promise<string> {
     const saltRounds = 12;
     return bcrypt.hash(password, saltRounds);
   }
 
-  // Verify password
+  /**
+   * Verifica se uma senha corresponde ao hash
+   * @param {string} password - Senha em texto plano
+   * @param {string} hashedPassword - Hash armazenado
+   * @returns {Promise<boolean>} True se a senha corresponder
+   */
   async verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
     return bcrypt.compare(password, hashedPassword);
   }
 
-  // 🛡️ Converter User em BasicUser (apenas dados básicos para login/register)
+  // ==================== MÉTODOS DE CONVERSÃO ====================
+
+  /**
+   * Converte um objeto de usuário em BasicUser (dados mínimos)
+   * @param {any} user - Objeto do usuário do Prisma
+   * @returns {BasicUser} Usuário com dados básicos apenas
+   */
   public toBasicUser(user: any): BasicUser {
     return {
       id: user.id,
@@ -113,7 +188,11 @@ class AuthService {
     };
   }
 
-  // 🛡️ Converter User em SafeUser (sem dados sensíveis)
+  /**
+   * Converte um objeto de usuário em SafeUser (sem dados sensíveis)
+   * @param {any} user - Objeto do usuário do Prisma com includes
+   * @returns {SafeUser} Usuário seguro com preferências
+   */
   public toSafeUser(user: any): SafeUser {
     return {
       id: user.id,
@@ -145,8 +224,17 @@ class AuthService {
     };
   }
 
-  // Generate JWT tokens
+  // ==================== MÉTODOS DE TOKEN ====================
+
+  /**
+   * Gera par de tokens JWT (access e refresh)
+   * @param {string} userId - ID do usuário
+   * @param {string} username - Nome de usuário
+   * @param {string} email - Email do usuário
+   * @returns {Promise<AuthTokens>} Par de tokens gerados
+   */
   async generateTokens(userId: string, username: string, email: string): Promise<AuthTokens> {
+    // Gera IDs únicos para rastreamento dos tokens
     const jti = `${userId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const refreshTokenId = `${userId}_refresh_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -182,16 +270,23 @@ class AuthService {
       { expiresIn: jwtRefreshExpiresIn }
     );
 
-    // Store refresh token in Redis
+    // Armazena refresh token no Redis
     const refreshExpiresInSeconds = this.parseTimeToSeconds(config.jwt.refreshExpiresIn);
     await redisService.setRefreshToken(userId, refreshToken, refreshExpiresInSeconds);
 
     return { accessToken, refreshToken };
   }
 
-  // Register new user
+  // ==================== MÉTODOS DE AUTENTICAÇÃO ====================
+
+  /**
+   * Registra um novo usuário no sistema
+   * @param {UserRegistrationData} userData - Dados do novo usuário
+   * @returns {Promise<BasicAuthResponse>} Usuário criado e tokens
+   * @throws {Error} Se email ou username já estiverem em uso
+   */
   async register(userData: UserRegistrationData): Promise<BasicAuthResponse> {
-    // Check if user already exists
+    // Verifica se já existe usuário com mesmo email ou username
     const existingUser = await this.prisma.user.findFirst({
       where: {
         OR: [
@@ -208,10 +303,10 @@ class AuthService {
       throw new Error('Nome de usuário já está em uso');
     }
 
-    // Hash password
+    // Gera hash da senha
     const hashedPassword = await this.hashPassword(userData.password);
 
-    // Create user
+    // Cria o usuário no banco
     const user = await this.prisma.user.create({
       data: {
         username: userData.username,
@@ -224,10 +319,8 @@ class AuthService {
       },
     });
 
-    // Generate tokens
+    // Gera tokens de autenticação
     const tokens = await this.generateTokens(user.id, user.username, user.email);
-
-    // 🛡️ Retornar apenas dados básicos do usuário
     const basicUser = this.toBasicUser(user);
 
     logger.info(`Novo usuário registrado: ${user.username} (${user.email})`);
@@ -235,9 +328,14 @@ class AuthService {
     return { user: basicUser, tokens };
   }
 
-  // Login user
+  /**
+   * Realiza login do usuário
+   * @param {UserLoginData} loginData - Credenciais de login
+   * @returns {Promise<BasicAuthResponse>} Usuário e tokens
+   * @throws {Error} Se as credenciais forem inválidas
+   */
   async login(loginData: UserLoginData): Promise<BasicAuthResponse> {
-    // Find user by email or username
+    // Busca usuário por email ou username
     const user = await this.prisma.user.findFirst({
       where: {
         OR: [
@@ -251,16 +349,14 @@ class AuthService {
       throw new Error('Credenciais inválidas');
     }
 
-    // Verify password
+    // Verifica a senha
     const isPasswordValid = await this.verifyPassword(loginData.password, user.password);
     if (!isPasswordValid) {
       throw new Error('Credenciais inválidas');
     }
 
-    // Generate new tokens
+    // Gera novos tokens
     const tokens = await this.generateTokens(user.id, user.username, user.email);
-
-    // 🛡️ Retornar apenas dados básicos do usuário
     const basicUser = this.toBasicUser(user);
 
     logger.info(`Usuário logado: ${user.username} (${user.email})`);
@@ -268,23 +364,26 @@ class AuthService {
     return { user: basicUser, tokens };
   }
 
-  // Refresh access token
+  /**
+   * Renova os tokens de autenticação usando o refresh token
+   * @param {string} refreshToken - Refresh token válido
+   * @returns {Promise<AuthTokens>} Novos tokens
+   * @throws {Error} Se o refresh token for inválido
+   */
   async refreshToken(refreshToken: string): Promise<AuthTokens> {
     try {
-      // Verify refresh token
+      // Verifica e decodifica o refresh token
       const payload = verify(refreshToken, config.jwt.secret) as RefreshTokenPayload;
       
-      // Check if refresh token exists in Redis
+      // Verifica se o token existe no Redis
       const storedToken = await redisService.getRefreshToken(payload.userId);
       if (!storedToken || storedToken !== refreshToken) {
         throw new Error('Token de refresh inválido');
       }
 
-      // Get user data
+      // Busca dados do usuário
       const user = await this.prisma.user.findUnique({
-        where: { 
-          id: payload.userId
-        },
+        where: { id: payload.userId },
         select: {
           id: true,
           username: true,
@@ -297,7 +396,7 @@ class AuthService {
         throw new Error('Usuário não encontrado');
       }
 
-      // Generate new tokens (automatically replaces old refresh token in Redis)
+      // Gera novos tokens (substitui automaticamente o refresh token no Redis)
       const newTokens = await this.generateTokens(user.id, user.username, user.email);
 
       logger.info(`Token renovado para usuário: ${user.username}`);
@@ -308,12 +407,17 @@ class AuthService {
     }
   }
 
-  // Logout user
+  /**
+   * Realiza logout do usuário
+   * @param {string} userId - ID do usuário
+   * @param {string} [accessTokenJti] - JTI do access token para blacklist
+   * @returns {Promise<void>}
+   */
   async logout(userId: string, accessTokenJti?: string): Promise<void> {
-    // Remove refresh token from Redis
+    // Remove refresh token do Redis
     await redisService.deleteRefreshToken(userId);
 
-    // Blacklist access token if provided
+    // Adiciona access token à blacklist se fornecido
     if (accessTokenJti) {
       const accessExpiresInSeconds = this.parseTimeToSeconds(config.jwt.expiresIn);
       await redisService.blacklistToken(accessTokenJti, accessExpiresInSeconds);
@@ -322,12 +426,19 @@ class AuthService {
     logger.info(`Usuário deslogado: ${userId}`);
   }
 
-  // Verify access token
+  // ==================== MÉTODOS DE VERIFICAÇÃO ====================
+
+  /**
+   * Verifica e decodifica um access token
+   * @param {string} token - Access token
+   * @returns {Promise<JwtPayload>} Payload decodificado
+   * @throws {Error} Se o token for inválido ou estiver na blacklist
+   */
   async verifyAccessToken(token: string): Promise<JwtPayload> {
     try {
       const payload = verify(token, config.jwt.secret) as JwtPayload;
       
-      // Check if token is blacklisted
+      // Verifica se o token está na blacklist
       if (payload.jti && await redisService.isTokenBlacklisted(payload.jti)) {
         throw new Error('Token inválido');
       }
@@ -338,7 +449,12 @@ class AuthService {
     }
   }
 
-  // Verify refresh token
+  /**
+   * Verifica e decodifica um refresh token
+   * @param {string} token - Refresh token
+   * @returns {Promise<RefreshTokenPayload>} Payload decodificado
+   * @throws {Error} Se o token for inválido
+   */
   async verifyRefreshToken(token: string): Promise<RefreshTokenPayload> {
     try {
       const payload = verify(token, config.jwt.secret) as RefreshTokenPayload;
@@ -348,12 +464,15 @@ class AuthService {
     }
   }
 
-  // 🛡️ Get user by ID (dados seguros apenas)
+  /**
+   * Busca usuário por ID (dados seguros)
+   * @param {string} userId - ID do usuário
+   * @returns {Promise<SafeUser>} Dados do usuário com preferências
+   * @throws {Error} Se o usuário não for encontrado
+   */
   async getUserById(userId: string): Promise<SafeUser> {
     const user = await this.prisma.user.findUnique({
-      where: { 
-        id: userId
-      },
+      where: { id: userId },
       include: {
         favoriteTeam: {
           select: {
@@ -384,7 +503,19 @@ class AuthService {
     return this.toSafeUser(user);
   }
 
-  // Helper method to parse time strings to seconds
+  // ==================== MÉTODOS AUXILIARES ====================
+
+  /**
+   * Converte string de tempo para segundos
+   * @private
+   * @param {string} timeString - String no formato "15m", "7d", etc.
+   * @returns {number} Tempo em segundos
+   * @throws {Error} Se o formato for inválido
+   * 
+   * @example
+   * parseTimeToSeconds('15m') // 900
+   * parseTimeToSeconds('7d')  // 604800
+   */
   private parseTimeToSeconds(timeString: string): number {
     const regex = /^(\d+)([smhd])$/;
     const match = timeString.match(regex);

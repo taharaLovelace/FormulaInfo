@@ -1,3 +1,26 @@
+/**
+ * @fileoverview Componente de últimas corridas
+ * @description Placeholder para exibição das corridas recentes.
+ * Funcionalidade em desenvolvimento.
+ * 
+ * @module components/home/LatestRaces
+ */
+
+// ==================== COMPONENTE ====================
+
+/**
+ * Componente de últimas corridas (placeholder)
+ * 
+ * @description Seção placeholder indicando que a funcionalidade
+ * de últimas corridas está em desenvolvimento.
+ * 
+ * @todo Implementar listagem de corridas recentes da temporada
+ * 
+ * @returns {JSX.Element} Seção de placeholder
+ * 
+ * @example
+ * <LatestRaces />
+ */
 export function LatestRaces() {
   return (
     <section className="bg-white py-12">

@@ -1,6 +1,21 @@
+/**
+ * @fileoverview Serviço de autenticação do frontend
+ * @description Este módulo encapsula todas as operações de autenticação,
+ * incluindo login, registro, logout e gerenciamento de tokens.
+ * Os refresh tokens são gerenciados via cookies HttpOnly pelo backend.
+ * 
+ * @module auth.service
+ * @requires ./api
+ */
+
 import api from './api';
 
-// 🛡️ Interface para usuário básico (retornado no login/register)
+// ==================== INTERFACES ====================
+
+/**
+ * Dados básicos do usuário (retornado no login/register)
+ * @interface BasicUser
+ */
 export interface BasicUser {
   id: string;
   username: string;
@@ -8,7 +23,11 @@ export interface BasicUser {
   name: string;
 }
 
-// 🛡️ Interface para usuário completo (retornado na rota /profile)
+/**
+ * Dados completos do usuário (retornado na rota /profile)
+ * Inclui preferências de equipe e piloto favoritos
+ * @interface User
+ */
 export interface User {
   id: string;
   username: string;
@@ -38,11 +57,20 @@ export interface User {
   updatedAt: string;
 }
 
+/**
+ * Dados para login
+ * @interface LoginData
+ */
 export interface LoginData {
-  identifier: string; // email ou username
+  /** Email ou username */
+  identifier: string;
   password: string;
 }
 
+/**
+ * Dados para registro de novo usuário
+ * @interface RegisterData
+ */
 export interface RegisterData {
   username: string;
   email: string;
@@ -53,30 +81,47 @@ export interface RegisterData {
   favoriteDriverId?: number;
 }
 
-// 🛡️ Resposta segura do backend (sem refresh token no JSON)
+/**
+ * Resposta de autenticação do backend
+ * Nota: refresh tokens são enviados via cookies HttpOnly
+ * @interface AuthResponse
+ */
 export interface AuthResponse {
   user: BasicUser;
   message: string;
-  // 🛡️ Nota: refresh tokens vêm apenas via cookies HttpOnly
 }
 
-// 🛡️ Resposta segura do refresh (apenas access token no JSON)
+/**
+ * Resposta do endpoint de refresh
+ * @interface RefreshResponse
+ */
 export interface RefreshResponse {
   accessToken: string;
   message: string;
-  // 🛡️ Nota: refresh token atualizado vem apenas via cookie HttpOnly
 }
 
+/**
+ * Serviço de autenticação
+ * Gerencia todas as operações de auth com a API
+ * @class AuthService
+ */
 class AuthService {
-  // 🛡️ Registrar novo usuário (versão segura)
+  /**
+   * Registra um novo usuário
+   * @param {RegisterData} data - Dados do novo usuário
+   * @returns {Promise<AuthResponse>} Dados do usuário criado
+   * 
+   * @description
+   * 1. Faz o registro - servidor define cookies HttpOnly
+   * 2. Faz refresh para obter o access token
+   * 3. Salva access token no localStorage
+   */
   async register(data: RegisterData): Promise<AuthResponse> {
-    // 🛡️ Primeiro faz o registro - o servidor define cookies HttpOnly automaticamente
     const response = await api.post<AuthResponse>('/auth/register', data);
     
-    // 🛡️ Agora precisa obter o access token via refresh (já que temos o refresh cookie)
+    // Obtém access token via refresh (já temos o refresh cookie)
     const refreshResponse = await api.post<RefreshResponse>('/auth/refresh');
     
-    // 🛡️ Salva apenas o access token no localStorage
     if (refreshResponse.data.accessToken) {
       localStorage.setItem('accessToken', refreshResponse.data.accessToken);
     }
@@ -84,15 +129,22 @@ class AuthService {
     return response.data;
   }
 
-  // 🛡️ Fazer login (versão segura)
+  /**
+   * Realiza login do usuário
+   * @param {LoginData} data - Credenciais de login
+   * @returns {Promise<AuthResponse>} Dados do usuário logado
+   * 
+   * @description
+   * 1. Faz o login - servidor define cookies HttpOnly
+   * 2. Faz refresh para obter o access token
+   * 3. Salva access token no localStorage
+   */
   async login(data: LoginData): Promise<AuthResponse> {
-    // 🛡️ Primeiro faz o login - o servidor define cookies HttpOnly automaticamente
     const response = await api.post<AuthResponse>('/auth/login', data);
     
-    // 🛡️ Agora precisa obter o access token via refresh (já que temos o refresh cookie)
+    // Obtém access token via refresh (já temos o refresh cookie)
     const refreshResponse = await api.post<RefreshResponse>('/auth/refresh');
     
-    // 🛡️ Salva apenas o access token no localStorage
     if (refreshResponse.data.accessToken) {
       localStorage.setItem('accessToken', refreshResponse.data.accessToken);
     }
@@ -100,47 +152,67 @@ class AuthService {
     return response.data;
   }
 
-  // 🛡️ Fazer logout (versão segura)
+  /**
+   * Realiza logout do usuário
+   * Remove tokens locais e invalida sessão no servidor
+   * @returns {Promise<void>}
+   */
   async logout(): Promise<void> {
     try {
-      // 🛡️ O servidor limpa os cookies HttpOnly automaticamente
+      // Servidor limpa os cookies HttpOnly
       await api.post('/auth/logout');
     } catch (error) {
       // Ignora erros de logout
     } finally {
-      // 🛡️ Remove apenas o access token do localStorage
+      // Remove access token do localStorage
       localStorage.removeItem('accessToken');
     }
   }
 
-  // Obter dados do usuário atual (básico)
+  /**
+   * Obtém dados básicos do usuário atual
+   * @returns {Promise<BasicUser>} Dados básicos do usuário
+   */
   async getCurrentUser(): Promise<BasicUser> {
     const response = await api.get<BasicUser>('/auth/me');
     return response.data;
   }
 
-  // 🛡️ Obter dados completos do perfil do usuário
+  /**
+   * Obtém dados completos do perfil do usuário
+   * Inclui preferências de equipe e piloto favoritos
+   * @returns {Promise<User>} Perfil completo do usuário
+   */
   async getProfile(): Promise<User> {
     const response = await api.get<User>('/auth/profile');
     return response.data;
   }
 
-  // 🛡️ Verificar se está autenticado (verifica apenas access token)
+  /**
+   * Verifica se o usuário está autenticado
+   * Baseado na presença do access token no localStorage
+   * @returns {boolean} True se autenticado
+   */
   isAuthenticated(): boolean {
     return !!localStorage.getItem('accessToken');
   }
 
-  // 🛡️ Obter access token armazenado
+  /**
+   * Obtém o access token armazenado
+   * @returns {string | null} Token ou null
+   */
   getToken(): string | null {
     return localStorage.getItem('accessToken');
   }
 
-  // 🛡️ Refresh token (já é feito automaticamente pelo interceptador)
+  /**
+   * Renova os tokens de autenticação
+   * Normalmente chamado automaticamente pelo interceptador
+   * @returns {Promise<RefreshResponse>} Novos tokens
+   */
   async refreshToken(): Promise<RefreshResponse> {
-    // 🛡️ O refresh token vem automaticamente via cookie HttpOnly
     const response = await api.post<RefreshResponse>('/auth/refresh');
     
-    // 🛡️ Atualiza apenas o access token no localStorage
     if (response.data.accessToken) {
       localStorage.setItem('accessToken', response.data.accessToken);
     }
@@ -149,5 +221,6 @@ class AuthService {
   }
 }
 
+/** Instância singleton do serviço de autenticação */
 export const authService = new AuthService();
 export default authService;

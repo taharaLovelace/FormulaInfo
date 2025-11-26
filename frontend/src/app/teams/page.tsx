@@ -1,10 +1,23 @@
+/**
+ * @fileoverview Página de equipes da Fórmula 1
+ * @description Exibe um grid visual com todas as equipes da temporada 2025,
+ * incluindo logos, cores, pilotos e imagens dos carros.
+ * 
+ * @module app/teams/page
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { teamsApiService, Team } from '../../services/teams.service';
 import { toast } from 'react-hot-toast';
 
-// Dados dos pilotos por equipe (baseado na imagem)
+// ==================== DADOS ESTÁTICOS ====================
+
+/**
+ * Mapeamento de pilotos por equipe para temporada 2025
+ * @constant
+ */
 const teamPilots: Record<string, { pilot1: string; pilot2: string }> = {
   'McLaren': { pilot1: 'Oscar PIASTRI', pilot2: 'Lando NORRIS' },
   'Mercedes': { pilot1: 'George RUSSELL', pilot2: 'Kimi ANTONELLI' },
@@ -18,7 +31,10 @@ const teamPilots: Record<string, { pilot1: string; pilot2: string }> = {
   'Kick Sauber': { pilot1: 'Nico HULKENBERG', pilot2: 'Gabriel BORTOLETO' }
 };
 
-// Mapear cores mais precisas baseadas na imagem
+/**
+ * Mapeamento de cores oficiais das equipes
+ * @constant
+ */
 const teamColorsMap: Record<string, string> = {
   'McLaren': '#FF8700',
   'Mercedes': '#00D2BE', 
@@ -32,7 +48,11 @@ const teamColorsMap: Record<string, string> = {
   'Kick Sauber': '#52E252'
 };
 
-// Mapeamento específico para nomes de arquivos de imagens
+/**
+ * Mapeamento de nomes para arquivos de imagens
+ * Usado para construir caminhos de logos e carros
+ * @constant
+ */
 const teamImageNameMap: Record<string, string> = {
   'McLaren': 'mclaren',
   'Mercedes': 'mercedes',
@@ -46,13 +66,32 @@ const teamImageNameMap: Record<string, string> = {
   'Kick Sauber': 'kicksauber'
 };
 
+// ==================== PÁGINA ====================
+
+/**
+ * Página de equipes da Fórmula 1
+ * 
+ * @description Renderiza um grid responsivo com cards de equipes:
+ * - Logo e cor da equipe no header
+ * - Nomes dos pilotos
+ * - Imagem do carro com efeitos hover
+ * - Design dark theme estilo F1 oficial
+ * 
+ * @returns {JSX.Element} Página de equipes
+ */
 export default function TeamsPage() {
+  /** Lista de equipes carregadas da API */
   const [teams, setTeams] = useState<Team[]>([]);
 
+  // Carrega equipes na montagem
   useEffect(() => {
     loadTeams();
   }, []);
 
+  /**
+   * Carrega lista de equipes da API
+   * @async
+   */
   const loadTeams = async () => {
     try {
       const teamsData = await teamsApiService.getAllTeams();

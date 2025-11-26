@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Componente seletor de piloto favorito
+ * @description Grid de cards para seleção de piloto favorito do usuário.
+ * Layout idêntico ao FeaturedDrivers mas com funcionalidade de seleção.
+ * 
+ * @module components/drivers/DriverSelector
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,12 +14,26 @@ import { teamsApiService } from '../../services/teams.service';
 import { toast } from 'react-hot-toast';
 import useAuthStore from '../../stores/auth.store';
 
+// ==================== FUNÇÕES AUXILIARES ====================
+
+/**
+ * Converte código ISO 2 para emoji de bandeira
+ * @param {string} code - Código ISO 2 do país (ex: "BR")
+ * @returns {string} Emoji da bandeira ou bandeira genérica se inválido
+ * 
+ * @example
+ * flagFromIso2('BR') // 🇧🇷
+ */
 function flagFromIso2(code: string) {
   if (!code || code.length !== 2) return '🏳️';
   const base = 0x1f1e6;
   return code.toUpperCase().split('').map(c => String.fromCodePoint(base + c.charCodeAt(0) - 65)).join('');
 }
 
+/**
+ * Mapeamento de códigos ISO 2 para gentílicos em português
+ * @constant
+ */
 const ISO2_PT_DEMONYM: Record<string, string> = {
   NL: 'Holandês',
   NZ: 'Neozelandês',
@@ -35,23 +57,55 @@ const ISO2_PT_DEMONYM: Record<string, string> = {
   US: 'Americano',
 };
 
+/**
+ * Converte código ISO 2 para gentílico em português
+ * @param {string} code - Código ISO 2 do país
+ * @returns {string} Gentílico em português ou código original se não mapeado
+ */
 function iso2ToPtDemonym(code: string) {
   return ISO2_PT_DEMONYM[code.toUpperCase()] || code.toUpperCase();
 }
 
+// ==================== COMPONENTE ====================
+
+/**
+ * Componente seletor de piloto favorito
+ * 
+ * @description Renderiza um grid de cards com todos os pilotos ativos:
+ * - Carrega pilotos e preferências do usuário
+ * - Permite selecionar ou remover piloto favorito
+ * - Exibe bandeira, nome, equipe e nacionalidade
+ * - Feedback visual de seleção e loading
+ * - Layout consistente com FeaturedDrivers
+ * 
+ * @returns {JSX.Element} Grid de cards de pilotos selecionáveis
+ * 
+ * @example
+ * // Na página de preferências
+ * <DriverSelector />
+ */
 export default function DriverSelector() {
+  /** Lista de pilotos carregados */
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  /** ID do piloto atualmente selecionado */
   const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null);
+  /** Estado de carregamento inicial */
   const [loading, setLoading] = useState(true);
+  /** Estado de atualização em andamento */
   const [updating, setUpdating] = useState(false);
   
   const { user } = useAuthStore();
 
+  // Carrega dados iniciais
   useEffect(() => {
     loadDrivers();
     loadUserPreferences();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * Carrega lista de pilotos ativos da API
+   * @async
+   */
   const loadDrivers = async () => {
     try {
       const driversData = await driversApiService.getActiveDrivers();
@@ -62,6 +116,10 @@ export default function DriverSelector() {
     }
   };
 
+  /**
+   * Carrega preferências do usuário logado
+   * @async
+   */
   const loadUserPreferences = async () => {
     try {
       if (user) {
@@ -75,6 +133,12 @@ export default function DriverSelector() {
     }
   };
 
+  /**
+   * Handler de seleção de piloto
+   * Atualiza a preferência no backend e estado local
+   * @param {number | null} driverId - ID do piloto ou null para remover
+   * @async
+   */
   const handleDriverSelect = async (driverId: number | null) => {
     setUpdating(true);
     try {
@@ -91,6 +155,7 @@ export default function DriverSelector() {
     }
   };
 
+  // Exibe skeleton loader durante carregamento
   if (loading) {
     return (
       <div className="space-y-6">
