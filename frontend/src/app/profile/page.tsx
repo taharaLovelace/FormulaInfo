@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import useAuthStore from '../../stores/auth.store';
 import { User } from '../../services/auth.service';
+import Link from 'next/link';
 
 export default function ProfilePage() {
   const { getProfile } = useAuthStore();
@@ -135,24 +136,23 @@ export default function ProfilePage() {
               </div>
             </dl>
           </div>
-          
-          <div className="px-4 py-3 bg-gray-50 text-right sm:px-6">
-            <button
-              type="button"
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-            >
-              Editar Perfil
-            </button>
-          </div>
         </div>
         
         {/* Seção de equipe e piloto favoritos */}
         <div className="mt-8 bg-white shadow rounded-lg overflow-hidden">
-          <div className="px-4 py-5 sm:px-6">
-            <h2 className="text-lg font-medium text-gray-900">Preferências de F1</h2>
-            <p className="mt-1 text-sm text-gray-600">Suas equipes e pilotos favoritos</p>
+          <div className="px-4 py-5 sm:px-6 flex justify-between items-start">
+            <div>
+              <h2 className="text-lg font-medium text-gray-900">Preferências de F1</h2>
+              <p className="mt-1 text-sm text-gray-600">Suas equipes e pilotos favoritos</p>
+            </div>
+            <Link
+              type="button"
+              href="/preferences"
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Editar Preferências de F1
+            </Link>
           </div>
-          
           <div className="px-4 py-5 sm:p-6">
             <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
               <div>

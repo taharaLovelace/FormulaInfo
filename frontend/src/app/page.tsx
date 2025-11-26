@@ -7,9 +7,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       <Hero />
-      <Stats />
       <FeaturedDrivers />
-      <LatestRaces />
     </div>
   )
 }

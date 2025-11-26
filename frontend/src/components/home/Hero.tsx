@@ -11,20 +11,6 @@ export function Hero() {
             Seu portal completo para o mundo da Fórmula 1. Estatísticas, perfis de pilotos, 
             histórico de corridas e tudo sobre o esporte mais emocionante do mundo.
           </p>
-          <div className="mt-10 flex items-center justify-center gap-x-6">
-            <a
-              href="/drivers"
-              className="rounded-md bg-white px-6 py-3 text-sm font-semibold text-f1-red shadow-sm hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-colors"
-            >
-              Explorar Pilotos
-            </a>
-            <a 
-              href="/races" 
-              className="text-sm font-semibold leading-6 text-white hover:text-gray-100 transition-colors"
-            >
-              Ver Corridas <span aria-hidden="true">→</span>
-            </a>
-          </div>
         </div>
       </div>
     </section>
