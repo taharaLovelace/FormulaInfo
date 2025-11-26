@@ -28,6 +28,21 @@ export interface SafeUser {
   username: string;
   email: string;
   name: string;
+  birthDate?: Date | null;
+  favoriteTeamId?: number | null;
+  favoriteDriverId?: number | null;
+  favoriteTeam?: {
+    id: number;
+    name: string;
+    fullName?: string | null;
+    logoUrl?: string | null;
+  } | null;
+  favoriteDriver?: {
+    id: number;
+    fullName: string;
+    driverNumber?: number | null;
+    imageUrl?: string | null;
+  } | null;
   isActive: boolean;
   emailVerified: boolean;
   createdAt: Date;
@@ -78,6 +93,21 @@ class AuthService {
       username: user.username,
       email: user.email,
       name: user.name,
+      birthDate: user.birthDate,
+      favoriteTeamId: user.favoriteTeamId,
+      favoriteDriverId: user.favoriteDriverId,
+      favoriteTeam: user.favoriteTeam ? {
+        id: user.favoriteTeam.id,
+        name: user.favoriteTeam.name,
+        fullName: user.favoriteTeam.fullName,
+        logoUrl: user.favoriteTeam.logoUrl,
+      } : null,
+      favoriteDriver: user.favoriteDriver ? {
+        id: user.favoriteDriver.id,
+        fullName: user.favoriteDriver.fullName,
+        driverNumber: user.favoriteDriver.driverNumber,
+        imageUrl: user.favoriteDriver.imageUrl,
+      } : null,
       isActive: user.isActive,
       emailVerified: user.emailVerified,
       createdAt: user.createdAt,
@@ -161,6 +191,24 @@ class AuthService {
         birthDate: userData.birthDate,
         favoriteTeamId: userData.favoriteTeamId,
         favoriteDriverId: userData.favoriteDriverId,
+      },
+      include: {
+        favoriteTeam: {
+          select: {
+            id: true,
+            name: true,
+            fullName: true,
+            logoUrl: true,
+          }
+        },
+        favoriteDriver: {
+          select: {
+            id: true,
+            fullName: true,
+            driverNumber: true,
+            imageUrl: true,
+          }
+        }
       }
     });
 
@@ -184,6 +232,24 @@ class AuthService {
           { email: loginData.identifier },
           { username: loginData.identifier }
         ]
+      },
+      include: {
+        favoriteTeam: {
+          select: {
+            id: true,
+            name: true,
+            fullName: true,
+            logoUrl: true,
+          }
+        },
+        favoriteDriver: {
+          select: {
+            id: true,
+            fullName: true,
+            driverNumber: true,
+            imageUrl: true,
+          }
+        }
       }
     });
 
@@ -294,15 +360,23 @@ class AuthService {
       where: { 
         id: userId
       },
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        name: true,
-        emailVerified: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true
+      include: {
+        favoriteTeam: {
+          select: {
+            id: true,
+            name: true,
+            fullName: true,
+            logoUrl: true,
+          }
+        },
+        favoriteDriver: {
+          select: {
+            id: true,
+            fullName: true,
+            driverNumber: true,
+            imageUrl: true,
+          }
+        }
       }
     });
 
