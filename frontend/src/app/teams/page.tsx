@@ -101,7 +101,7 @@ export default function TeamsPage() {
                     <img 
                       src={team.logoUrl || `/team-logos/2025${teamImageNameMap[team.name] || team.name.toLowerCase().replace(/\s+/g, '')}logowhite.avif`}
                       alt={`${team.name} logo`}
-                      className="h-6 w-auto filter brightness-0 invert"
+                      className="h-6 w-auto"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
                       }}

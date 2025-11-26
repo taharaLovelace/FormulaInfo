@@ -5,6 +5,9 @@ import { teamsApiService, Team } from '../../services/teams.service';
 import { toast } from 'react-hot-toast';
 import useAuthStore from '../../stores/auth.store';
 
+// Equipes que têm logos com cores escuras (não precisam do filtro brightness-0)
+const darkLogoTeams = ['Ferrari', 'Kick Sauber'];
+
 export default function TeamSelector() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
@@ -118,7 +121,9 @@ export default function TeamSelector() {
                   <img
                     src={team.logoUrl}
                     alt={`${team.name} logo`}
-                    className="h-12 w-auto mx-auto object-contain"
+                    className={`h-12 w-auto mx-auto object-contain ${
+                      darkLogoTeams.includes(team.name) ? '' : 'brightness-0'
+                    }`}
                   />
                 </div>
               )}
