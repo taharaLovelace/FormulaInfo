@@ -36,6 +36,9 @@ export interface SafeUser {
     name: string;
     fullName?: string | null;
     logoUrl?: string | null;
+    carImageUrl?: string | null;
+    teamColor?: string | null;
+    country?: string | null;
   } | null;
   favoriteDriver?: {
     id: number;
@@ -101,6 +104,9 @@ class AuthService {
         name: user.favoriteTeam.name,
         fullName: user.favoriteTeam.fullName,
         logoUrl: user.favoriteTeam.logoUrl,
+        carImageUrl: user.favoriteTeam.carImageUrl,
+        teamColor: user.favoriteTeam.teamColor,
+        country: user.favoriteTeam.country,
       } : null,
       favoriteDriver: user.favoriteDriver ? {
         id: user.favoriteDriver.id,
@@ -199,6 +205,9 @@ class AuthService {
             name: true,
             fullName: true,
             logoUrl: true,
+            carImageUrl: true,
+            teamColor: true,
+            country: true,
           }
         },
         favoriteDriver: {
@@ -240,6 +249,9 @@ class AuthService {
             name: true,
             fullName: true,
             logoUrl: true,
+            carImageUrl: true,
+            teamColor: true,
+            country: true,
           }
         },
         favoriteDriver: {
@@ -367,6 +379,9 @@ class AuthService {
             name: true,
             fullName: true,
             logoUrl: true,
+            carImageUrl: true,
+            teamColor: true,
+            country: true,
           }
         },
         favoriteDriver: {

@@ -16,6 +16,7 @@ import { validatorCompiler, serializerCompiler, ZodTypeProvider, jsonSchemaTrans
 // Routes
 import driversRoutes from './routes/drivers';
 import authRoutes from './routes/auth';
+import teamsRoutes from './routes/teams';
 
 export const buildApp = async () => {
   const app = Fastify({ logger }).withTypeProvider<ZodTypeProvider>();
@@ -107,6 +108,7 @@ export const buildApp = async () => {
   const apiPrefix = config.api.prefix;
   await app.register(driversRoutes, { prefix: `${apiPrefix}/drivers` });
   await app.register(authRoutes, { prefix: `${apiPrefix}/auth` });
+  await app.register(teamsRoutes, { prefix: apiPrefix });
 
   // 404
   app.setNotFoundHandler(async (request, reply) => {

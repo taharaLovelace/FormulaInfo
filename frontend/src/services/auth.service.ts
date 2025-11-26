@@ -13,6 +13,9 @@ export interface User {
     name: string;
     fullName: string | null;
     logoUrl: string | null;
+    carImageUrl: string | null;
+    teamColor: string | null;
+    country: string | null;
   } | null;
   favoriteDriver: {
     id: number;
