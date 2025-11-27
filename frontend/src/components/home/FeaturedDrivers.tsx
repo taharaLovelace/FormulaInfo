@@ -1,13 +1,27 @@
+/**
+ * @fileoverview Componente de pilotos em destaque
+ * @description Grid de cards exibindo todos os pilotos ativos da F1.
+ * 
+ * @module components/home/FeaturedDrivers
+ */
+
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
 
+// ==================== INTERFACES ====================
+
+/**
+ * Representa um piloto de Fórmula 1
+ * @interface Driver
+ */
 interface Driver {
   id: number
   driverNumber: number
   fullName: string
   firstName: string
   lastName: string
+  /** Código ISO 2 do país (ex: "BR", "GB") */
   nationality: string
   teamName: string
   birthDate?: string
@@ -16,17 +30,36 @@ interface Driver {
   isActive: boolean
 }
 
+/**
+ * Resposta da API de pilotos
+ * @interface ApiResponse
+ */
 interface ApiResponse {
   success: true
   data: Driver[]
 }
 
+// ==================== FUNÇÕES AUXILIARES ====================
+
+/**
+ * Converte código ISO 2 para emoji de bandeira
+ * @param {string} code - Código ISO 2 do país (ex: "BR")
+ * @returns {string} Emoji da bandeira ou bandeira genérica se inválido
+ * 
+ * @example
+ * flagFromIso2('BR') // 🇧🇷
+ * flagFromIso2('GB') // 🇬🇧
+ */
 function flagFromIso2(code: string) {
   if (!code || code.length !== 2) return '🏳️'
   const base = 0x1f1e6
   return code.toUpperCase().split('').map(c => String.fromCodePoint(base + c.charCodeAt(0) - 65)).join('')
 }
 
+/**
+ * Mapeamento de códigos ISO 2 para gentílicos em português
+ * @constant
+ */
 const ISO2_PT_DEMONYM: Record<string, string> = {
   NL: 'Holandês',
   NZ: 'Neozelandês',
@@ -45,16 +78,50 @@ const ISO2_PT_DEMONYM: Record<string, string> = {
   TH: 'Tailandês',
 }
 
+/**
+ * Converte código ISO 2 para gentílico em português
+ * @param {string} code - Código ISO 2 do país
+ * @returns {string} Gentílico em português ou código original se não mapeado
+ * 
+ * @example
+ * iso2ToPtDemonym('BR') // 'Brasileiro'
+ * iso2ToPtDemonym('XX') // 'XX'
+ */
 function iso2ToPtDemonym(code: string) {
   return ISO2_PT_DEMONYM[code.toUpperCase()] || code.toUpperCase()
 }
 
+// ==================== COMPONENTE ====================
+
+/**
+ * Componente de pilotos em destaque
+ * 
+ * @description Exibe um grid responsivo com todos os pilotos ativos:
+ * - Carrega dados da API /api/v1/drivers
+ * - Exibe skeleton loader durante carregamento
+ * - Mostra bandeira e gentílico de cada piloto
+ * - Cards com hover effect e informações essenciais
+ * 
+ * @returns {JSX.Element} Grid de cards de pilotos
+ * 
+ * @example
+ * // Na página inicial
+ * <FeaturedDrivers />
+ */
 export function FeaturedDrivers() {
+  /** Lista de pilotos carregados */
   const [drivers, setDrivers] = useState<Driver[]>([])
+  /** Estado de carregamento */
   const [loading, setLoading] = useState(true)
+  /** Mensagem de erro, se houver */
   const [error, setError] = useState<string | null>(null)
+  /** Contador para forçar refresh (não utilizado atualmente) */
   const [refreshCounter, setRefreshCounter] = useState(0)
 
+  /**
+   * Carrega a lista de pilotos da API
+   * @async
+   */
   const load = useCallback(async () => {
     try {
       setLoading(true)
@@ -63,13 +130,15 @@ export function FeaturedDrivers() {
       if (!res.ok) throw new Error(`Erro ${res.status}`)
       const json: ApiResponse = await res.json()
       setDrivers(json.data)
-    } catch (e: any) {
-      setError(e.message || 'Falha ao carregar pilotos')
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'Falha ao carregar pilotos'
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
   }, [])
 
+  // Carrega pilotos na montagem do componente
   useEffect(() => { load() }, [load, refreshCounter])
 
   return (

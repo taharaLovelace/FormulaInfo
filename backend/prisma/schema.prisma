@@ -1,29 +1,102 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// =============================================================================
+// Schema Prisma - FormulaInfo Database
+// =============================================================================
+// @description Schema de banco de dados PostgreSQL para a aplicação FormulaInfo.
+// Define os modelos de Drivers (pilotos), Teams (equipes) e Users (usuários),
+// incluindo relacionamentos de preferências de F1.
+//
+// @see https://pris.ly/d/prisma-schema - Documentação oficial do Prisma Schema
+// =============================================================================
 
+// Configuração do gerador do Prisma Client
 generator client {
-    provider = "prisma-client-js"
+    provider      = "prisma-client-js"
+    binaryTargets = ["native", "debian-openssl-3.0.x"] // Suporte para Docker Linux
 }
 
+// Configuração da fonte de dados PostgreSQL
 datasource db {
     provider = "postgresql"
     url      = env("DATABASE_URL")
 }
 
+// =============================================================================
+// Model: Driver (Piloto)
+// =============================================================================
+// @description Representa um piloto de Fórmula 1 com informações pessoais,
+// dados da carreira e relacionamento com usuários que o favoritaram.
+// =============================================================================
 model Driver {
+    id           Int       @id @default(autoincrement())
+    driverNumber Int?      @unique @map("driver_number") // Número do piloto (ex: 44, 1, 33)
+    fullName     String    @map("full_name") // Nome completo do piloto
+    firstName    String?   @map("first_name") // Primeiro nome
+    lastName     String?   @map("last_name") // Sobrenome
+    nationality  String? // Nacionalidade
+    teamName     String?   @map("team_name") // Nome da equipe atual
+    birthDate    DateTime? @map("birth_date") @db.Date // Data de nascimento
+    bio          String? // Biografia do piloto
+    imageUrl     String?   @map("image_url") // URL da foto do piloto
+    isActive     Boolean   @default(true) @map("is_active") // Se ainda está ativo na F1
+    createdAt    DateTime  @default(now()) @map("created_at")
+    updatedAt    DateTime  @updatedAt @map("updated_at")
+
+    // Relacionamento: Usuários que têm este piloto como favorito
+    favoriteByUsers User[] @relation("FavoriteDriver")
+
+    @@map("drivers")
+}
+
+// =============================================================================
+// Model: Team (Equipe)
+// =============================================================================
+// @description Representa uma equipe de Fórmula 1 com informações detalhadas
+// sobre a escuderia, incluindo cores, logo, imagem do carro e histórico.
+// =============================================================================
+model Team {
     id           Int      @id @default(autoincrement())
-    driverNumber Int?     @unique @map("driver_number")
-    fullName     String   @map("full_name")
-    firstName    String?  @map("first_name")
-    lastName     String?  @map("last_name")
-    nationality  String?
-    teamName     String?  @map("team_name")
-    birthDate    DateTime? @map("birth_date") @db.Date
-    bio          String?
-    imageUrl     String?  @map("image_url")
-    isActive     Boolean  @default(true) @map("is_active")
+    name         String   @unique // Nome curto da equipe
+    fullName     String?  @map("full_name") // Nome oficial completo
+    country      String? // País de origem
+    logoUrl      String?  @map("logo_url") // URL do logo da equipe
+    carImageUrl  String?  @map("car_image_url") // URL da imagem do carro
+    teamColor    String?  @map("team_color") // Cor principal (hexadecimal)
+    description  String? // Descrição da equipe
+    headquarters String? // Localização da sede
+    founded      Int? // Ano de fundação
+    isActive     Boolean  @default(true) @map("is_active") // Se ainda compete na F1
     createdAt    DateTime @default(now()) @map("created_at")
     updatedAt    DateTime @updatedAt @map("updated_at")
 
-    @@map("drivers")
+    // Relacionamento: Usuários que têm esta equipe como favorita
+    favoriteByUsers User[] @relation("FavoriteTeam")
+
+    @@map("teams")
+}
+
+// =============================================================================
+// Model: User (Usuário)
+// =============================================================================
+// @description Representa um usuário do sistema com dados de autenticação,
+// informações pessoais e preferências de F1 (equipe e piloto favoritos).
+// =============================================================================
+model User {
+    id               String    @id @default(cuid()) // ID único CUID
+    username         String    @unique // Nome de usuário único
+    email            String    @unique // Email único
+    password         String // Hash da senha (bcrypt)
+    name             String // Nome de exibição
+    birthDate        DateTime? @map("birth_date") @db.Date // Data de nascimento
+    favoriteTeamId   Int?      @map("favorite_team_id") // FK para equipe favorita
+    favoriteDriverId Int?      @map("favorite_driver_id") // FK para piloto favorito
+    emailVerified    Boolean   @default(false) @map("email_verified")
+    isActive         Boolean   @default(true) @map("is_active")
+    createdAt        DateTime  @default(now()) @map("created_at")
+    updatedAt        DateTime  @updatedAt @map("updated_at")
+
+    // Relacionamentos com preferências de F1
+    favoriteTeam   Team?   @relation("FavoriteTeam", fields: [favoriteTeamId], references: [id])
+    favoriteDriver Driver? @relation("FavoriteDriver", fields: [favoriteDriverId], references: [id])
+
+    @@map("users")
 }

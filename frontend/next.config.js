@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
+  eslint: {
+    // Durante o build, permite algumas regras específicas
+    ignoreDuringBuilds: false,
+  },
   images: {
     domains: [
       'media.formula1.com',

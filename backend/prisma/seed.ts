@@ -1,10 +1,178 @@
+/**
+ * @fileoverview Script de Seed do Banco de Dados
+ * @description Script de população inicial do banco de dados com dados das equipes
+ * e pilotos da temporada 2025 de Fórmula 1. Utiliza upsert para permitir
+ * execuções repetidas sem duplicar dados.
+ * 
+ * @usage npx prisma db seed
+ */
+
 import { PrismaClient } from '@prisma/client';
 
+/** Cliente Prisma para operações no banco de dados */
 const prisma = new PrismaClient();
 
+/**
+ * Função principal de seed do banco de dados.
+ * 
+ * @description Popula o banco de dados com:
+ * - 10 equipes da temporada 2025 de F1 com logos, imagens de carros e cores
+ * - 20 pilotos da temporada 2025 com informações detalhadas
+ * 
+ * Utiliza upsert para inserir novos registros ou atualizar existentes,
+ * permitindo execuções seguras múltiplas vezes.
+ */
 async function main() {
+  console.log('Seeding teams...');
+
+  /**
+   * Dados das equipes de F1 para a temporada 2025.
+   * Cada equipe inclui informações de branding e histórico.
+   */
+  const teams = [
+    {
+      name: 'Red Bull Racing',
+      fullName: 'Oracle Red Bull Racing',
+      country: 'Austria',
+      logoUrl: '/team-logos/2025redbullracinglogowhite.avif',
+      carImageUrl: '/team-cars/2025redbullracingcarright.avif',
+      teamColor: '#0600EF',
+      description: 'A Red Bull Racing é uma das equipes mais dominantes da Fórmula 1 moderna.',
+      headquarters: 'Milton Keynes, Reino Unido',
+      founded: 2005,
+      isActive: true
+    },
+    {
+      name: 'Ferrari',
+      fullName: 'Scuderia Ferrari',
+      country: 'Italy',
+      logoUrl: '/team-logos/2025ferrarilogowhite.avif',
+      carImageUrl: '/team-cars/2025ferraricarright.avif',
+      teamColor: '#DC0000',
+      description: 'A equipe mais icônica e histórica da Fórmula 1.',
+      headquarters: 'Maranello, Itália',
+      founded: 1950,
+      isActive: true
+    },
+    {
+      name: 'Mercedes',
+      fullName: 'Mercedes-AMG PETRONAS F1 Team',
+      country: 'Germany',
+      logoUrl: '/team-logos/2025mercedeslogowhite.avif',
+      carImageUrl: '/team-cars/2025mercedescarright.avif',
+      teamColor: '#00D2BE',
+      description: 'Dominante na era híbrida da Fórmula 1.',
+      headquarters: 'Brackley, Reino Unido',
+      founded: 2010,
+      isActive: true
+    },
+    {
+      name: 'McLaren',
+      fullName: 'McLaren Formula 1 Team',
+      country: 'United Kingdom',
+      logoUrl: '/team-logos/2025mclarenlogowhite.avif',
+      carImageUrl: '/team-cars/2025mclarencarright.avif',
+      teamColor: '#FF8700',
+      description: 'Uma das equipes mais tradicionais e bem-sucedidas da F1.',
+      headquarters: 'Woking, Reino Unido',
+      founded: 1966,
+      isActive: true
+    },
+    {
+      name: 'Aston Martin',
+      fullName: 'Aston Martin Aramco Cognizant F1 Team',
+      country: 'United Kingdom',
+      logoUrl: '/team-logos/2025astonmartinlogowhite.avif',
+      carImageUrl: '/team-cars/2025astonmartincarright.avif',
+      teamColor: '#006F62',
+      description: 'Equipe britânica de luxo com ambições de título.',
+      headquarters: 'Silverstone, Reino Unido',
+      founded: 2021,
+      isActive: true
+    },
+    {
+      name: 'Alpine',
+      fullName: 'BWT Alpine F1 Team',
+      country: 'France',
+      logoUrl: '/team-logos/2025alpinelogowhite.avif',
+      carImageUrl: '/team-cars/2025alpinecarright.avif',
+      teamColor: '#0090FF',
+      description: 'Representante francesa na Fórmula 1.',
+      headquarters: 'Enstone, Reino Unido',
+      founded: 2021,
+      isActive: true
+    },
+    {
+      name: 'Williams',
+      fullName: 'Williams Racing',
+      country: 'United Kingdom',
+      logoUrl: '/team-logos/2025williamslogowhite.avif',
+      carImageUrl: '/team-cars/2025williamscarright.avif',
+      teamColor: '#005AFF',
+      description: 'Equipe histórica com grande tradição na F1.',
+      headquarters: 'Grove, Reino Unido',
+      founded: 1977,
+      isActive: true
+    },
+    {
+      name: 'Racing Bulls',
+      fullName: 'Visa Cash App RB Formula One Team',
+      country: 'Italy',
+      logoUrl: '/team-logos/2025racingbullslogowhite.avif',
+      carImageUrl: '/team-cars/2025racingbullscarright.avif',
+      teamColor: '#6692FF',
+      description: 'Equipe irmã da Red Bull Racing.',
+      headquarters: 'Faenza, Itália',
+      founded: 2006,
+      isActive: true
+    },
+    {
+      name: 'Haas F1 Team',
+      fullName: 'MoneyGram Haas F1 Team',
+      country: 'United States',
+      logoUrl: '/team-logos/2025haasf1teamlogowhite.avif',
+      carImageUrl: '/team-cars/2025haasf1teamcarright.avif',
+      teamColor: '#FFFFFF',
+      description: 'Única equipe americana na Fórmula 1.',
+      headquarters: 'Kannapolis, Estados Unidos',
+      founded: 2016,
+      isActive: true
+    },
+    {
+      name: 'Kick Sauber',
+      fullName: 'Stake F1 Team Kick Sauber',
+      country: 'Switzerland',
+      logoUrl: '/team-logos/2025kicksauberlogowhite.avif',
+      carImageUrl: '/team-cars/2025kicksaubercarright.avif',
+      teamColor: '#52E252',
+      description: 'Equipe suíça com nova identidade em 2025.',
+      headquarters: 'Hinwil, Suíça',
+      founded: 1993,
+      isActive: true
+    }
+  ];
+
+  // Criar/atualizar equipes no banco de dados usando upsert
+  for (const teamData of teams) {
+    try {
+      await prisma.team.upsert({
+        where: { name: teamData.name },
+        update: teamData,
+        create: teamData,
+      });
+      console.log(`✅ Team ${teamData.name} seeded successfully`);
+    } catch (error) {
+      console.error(`❌ Error seeding team ${teamData.name}:`, error);
+    }
+  }
+
+  console.log('Teams seeded successfully');
   console.log('Seeding drivers...');
 
+  /**
+   * Dados dos pilotos de F1 para a temporada 2025.
+   * Inclui número, nome completo, nacionalidade, equipe e biografia.
+   */
   const drivers = [
     {
       driverNumber: 1,
@@ -228,6 +396,7 @@ async function main() {
     },
   ];
 
+  // Criar/atualizar pilotos no banco de dados usando upsert
   for (const driver of drivers) {
     await prisma.driver.upsert({
       where: { driverNumber: driver.driverNumber },
@@ -239,11 +408,13 @@ async function main() {
   console.log('Drivers seeded successfully');
 }
 
+// Execução principal do seed
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('Erro ao executar seed:', e);
     process.exit(1);
   })
   .finally(async () => {
+    // Desconecta do banco de dados ao finalizar
     await prisma.$disconnect();
   });

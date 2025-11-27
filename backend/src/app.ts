@@ -1,41 +1,79 @@
+/**
+ * @fileoverview Configuração principal da aplicação Fastify
+ * @description Inicializa e configura o servidor Fastify com todos os
+ * plugins, middlewares e rotas necessários.
+ * 
+ * @module app
+ */
+
 import Fastify from 'fastify';
 import { config } from './config/config';
 import { logger } from './utils/logger';
 
-// Plugins
+// ==================== PLUGINS ====================
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import compress from '@fastify/compress';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import cookie from '@fastify/cookie';
+import jwt from '@fastify/jwt';
 import { validatorCompiler, serializerCompiler, ZodTypeProvider, jsonSchemaTransform } from 'fastify-type-provider-zod';
 
-// Routes
+// ==================== ROTAS ====================
 import driversRoutes from './routes/drivers';
+import authRoutes from './routes/auth';
+import teamsRoutes from './routes/teams';
 
+// ==================== BUILDER ====================
+
+/**
+ * Constrói e configura a aplicação Fastify
+ * 
+ * @description Inicializa o servidor com:
+ * - Validação Zod para schemas
+ * - CORS configurado para credenciais
+ * - Helmet para segurança de headers
+ * - Compressão de respostas
+ * - Cookies e JWT
+ * - Rate limiting
+ * - Documentação Swagger
+ * - Rotas de API (drivers, auth, teams)
+ * - Health check endpoint
+ * - Handlers de erro 404 e erros gerais
+ * 
+ * @returns {Promise<FastifyInstance>} Instância configurada do Fastify
+ * 
+ * @example
+ * const app = await buildApp();
+ * await app.listen({ port: 3000 });
+ */
 export const buildApp = async () => {
   const app = Fastify({ logger }).withTypeProvider<ZodTypeProvider>();
 
-  // Zod compilers
+  // Configura compiladores Zod para validação e serialização
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 
-  // CORS (restringir ao proxy)
+  // ========== CORS ==========
   await app.register(cors, {
     origin: (origin, cb) => {
       const allowed = [
-        'http://192.168.56.10',
+        config.cors.origin,
         'http://localhost',
       ];
-      // permitir chamadas internas (sem origin)
+      // Permite chamadas internas (sem origin)
       if (!origin) return cb(null, true);
-      if (allowed.includes(origin)) return cb(null, true);
+      if (allowed.some(allowedOrigin => origin === allowedOrigin || origin.startsWith(allowedOrigin))) {
+        return cb(null, true);
+      }
       return cb(new Error('Origin not allowed'), false);
     },
     credentials: true
   });
 
+  // ========== SEGURANÇA ==========
   await app.register(helmet, {
     contentSecurityPolicy: {
       directives: {
@@ -47,14 +85,22 @@ export const buildApp = async () => {
     },
   });
 
+  // ========== COMPRESSÃO ==========
   await app.register(compress);
+  
+  // ========== COOKIES E JWT ==========
+  await app.register(cookie);
+  await app.register(jwt, {
+    secret: config.jwt.secret
+  });
 
+  // ========== RATE LIMITING ==========
   await app.register(rateLimit, {
     max: config.rateLimit.maxRequests,
     timeWindow: config.rateLimit.windowMs
   });
 
-  // Swagger documentation
+  // ========== SWAGGER (DOCUMENTAÇÃO) ==========
   await app.register(swagger, {
     openapi: {
       openapi: '3.0.0',
@@ -83,7 +129,7 @@ export const buildApp = async () => {
     transformStaticCSP: (header) => header,
   });
 
-  // Health
+  // ========== HEALTH CHECK ==========
   app.get('/health', async () => ({
     status: 'OK',
     timestamp: new Date().toISOString(),
@@ -91,16 +137,18 @@ export const buildApp = async () => {
     environment: config.nodeEnv,
   }));
 
-  // Register routes com prefixo
+  // ========== REGISTRO DE ROTAS ==========
   const apiPrefix = config.api.prefix;
   await app.register(driversRoutes, { prefix: `${apiPrefix}/drivers` });
+  await app.register(authRoutes, { prefix: `${apiPrefix}/auth` });
+  await app.register(teamsRoutes, { prefix: apiPrefix });
 
-  // 404
+  // ========== HANDLER 404 ==========
   app.setNotFoundHandler(async (request, reply) => {
     reply.status(404).send({ error: 'Route not found', message: `Cannot ${request.method} ${request.url}` });
   });
 
-  // Error handler
+  // ========== HANDLER DE ERROS ==========
   app.setErrorHandler(async (error, request, reply) => {
     logger.error({ err: error, url: request.url, method: request.method, ip: request.ip }, 'Error occurred');
     reply.status(error.statusCode || 500).send({ error: true, message: error.message || 'Internal Server Error' });
