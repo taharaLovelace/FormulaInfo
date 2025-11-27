@@ -11,45 +11,12 @@ import { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { PrismaClient } from '@prisma/client';
 import { AuthService, AuthTokens } from '../services/auth.service';
+import { registerSchema, loginSchema } from '../schemas/auth.schemas';
 
 // ==================== CONFIGURAÇÃO ====================
 
 const prisma = new PrismaClient();
 const authService = new AuthService(prisma);
-
-// ==================== SCHEMAS DE VALIDAÇÃO ====================
-
-/**
- * Schema de validação para registro de usuário
- * @description Valida todos os campos necessários para criar uma conta
- */
-const registerSchema = z.object({
-  /** Nome de usuário único (3-20 caracteres, alfanumérico + underscore) */
-  username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/),
-  /** Email válido */
-  email: z.string().email(),
-  /** Senha (mínimo 8 caracteres) */
-  password: z.string().min(8),
-  /** Nome completo (2-100 caracteres) */
-  name: z.string().min(2).max(100),
-  /** Data de nascimento opcional (ISO datetime) */
-  birthDate: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
-  /** ID da equipe favorita opcional */
-  favoriteTeamId: z.number().int().positive().optional(),
-  /** ID do piloto favorito opcional */
-  favoriteDriverId: z.number().int().positive().optional()
-});
-
-/**
- * Schema de validação para login
- * @description Aceita email ou username como identificador
- */
-const loginSchema = z.object({
-  /** Email ou nome de usuário */
-  identifier: z.string().min(1),
-  /** Senha do usuário */
-  password: z.string().min(1)
-});
 
 // ==================== FUNÇÕES DE COOKIES ====================
 
