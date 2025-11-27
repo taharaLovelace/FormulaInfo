@@ -4,16 +4,16 @@
 # Esta pipeline executa os testes unitários e de integração do backend
 # utilizando o docker-compose.yml do projeto para subir PostgreSQL e Redis.
 #
-# Trigger: Push ou Pull Request para as branches main e development
+# Trigger: Push ou Pull Request para as branches master e development
 # =============================================================================
 
 name: Tests
 
 on:
   push:
-    branches: [main, development]
+    branches: [master, development]
   pull_request:
-    branches: [main, development]
+    branches: [master, development]
 
 jobs:
   test:
