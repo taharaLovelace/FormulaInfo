@@ -1,77 +1,60 @@
-# Formula Info
+# Formula Info 🏎️
 
-Portal de informações sobre Fórmula 1 com dados dos pilotos do grid atual da temporada 2025.
+Portal de informações sobre Fórmula 1 com dados de pilotos e equipes da temporada 2025.
 
 ## 🚀 Tecnologias
 
-- **Backend**: Node.js, Fastify, TypeScript, Prisma
-- **Frontend**: Next.js, React, TypeScript, Tailwind CSS
-- **Banco de Dados**: PostgreSQL
-- **Proxy**: Nginx
-- **Containerização**: Docker
+| Backend | Frontend | Infra |
+|---------|----------|-------|
+| Node.js + Fastify | Next.js + React | Docker + Nginx |
+| TypeScript + Prisma | Tailwind CSS | PostgreSQL + Redis |
+| Vitest (testes) | | GitHub Actions (CI) |
 
 ## ⚡ Funcionalidades
 
-- Listagem dos pilotos ativos da temporada 2025
-- Cards dos pilotos com bandeiras dos países, equipes e biografias
-- API REST documentada com Swagger
-- Interface responsiva e moderna
+- Listagem de pilotos e equipes da temporada 2025
+- Sistema de autenticação (registro/login com JWT)
+- Preferências do usuário (equipe e piloto favoritos)
+- API REST com validação Zod
+- Testes unitários e de integração
 
 ## 🛠️ Como executar
 
-### Pré-requisitos
-- Docker
-- Docker Compose
-
-### Instalação
-
 ```bash
-# 1. Clone o repositório
-git clone <repository-url>
+# Clone e configure
+git clone https://github.com/taharaLovelace/FormulaInfo.git
 cd formula-info
-
-# 2. Copie os arquivos de ambiente
 cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env.local
 
-# 3. Inicie a aplicação
-docker-compose up -d --build
-
-# 4. Execute as migrações e popule o banco
-docker-compose exec backend npx prisma migrate deploy
-docker-compose exec backend npm run db:seed
+# Inicie com Docker
+docker compose up -d --build
 ```
 
 ### Acesso
-
-- **Aplicação**: http://localhost
+- **App**: http://localhost
 - **API**: http://localhost/api/v1
-- **Swagger**: http://localhost/docs
 
-### Comandos úteis
+## 🧪 Testes
 
 ```bash
-# Ver logs
-docker-compose logs -f
-
-# Parar aplicação
-docker-compose down
-
-# Reiniciar um serviço
-docker-compose restart backend
+cd backend
+npm test              # Executa testes
+npm run test:coverage # Com cobertura
 ```
 
 ## 📁 Estrutura
 
 ```
 formula-info/
-├── backend/          # API Fastify + Prisma
-├── frontend/         # Next.js
-└── nginx/            # Proxy Nginx
+├── backend/     # API Fastify + Prisma + Vitest
+├── frontend/    # Next.js + Tailwind
+├── nginx/       # Proxy reverso
+└── .github/     # GitHub Actions (CI)
 ```
 
-## 🏎️ Sobre
+## 🔄 CI/CD
 
-Formula Info é uma plataforma que exibe informações dos pilotos da temporada 2025 de Fórmula 1. O projeto apresenta cards interativos com dados como nacionalidade (com bandeiras emoji), equipes atuais e biografias dos pilotos.
-
-Os dados são servidos através de uma API REST construída com Fastify e TypeScript, utilizando Prisma como ORM para comunicação com o banco PostgreSQL. O frontend é desenvolvido em Next.js com Tailwind CSS para estilização.
+Pipeline automática no GitHub Actions:
+- Executa em push/PR para `main` e `development`
+- Roda testes unitários e de integração
+- Usa PostgreSQL e Redis via Docker Compose
