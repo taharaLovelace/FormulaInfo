@@ -1,10 +1,10 @@
 /**
  * @fileoverview Testes de Integração
- * @description Contém 3 testes de integração:
+ * @description Contém 4 testes de integração:
  * - 1 teste de fluxo de autenticação (registro + login)
- * - 1 teste de listagem de dados públicos (equipes)
- * - 1 teste de listagem de dados públicos (pilotos)
- * 
+ * - 1 teste de listagem de equipes
+ * - 1 teste de listagem de pilotos
+ * - 1 teste de atualização de preferências (piloto favorito)
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -16,6 +16,7 @@ import { PrismaClient } from '@prisma/client';
 
 let app: any;
 let prisma: PrismaClient;
+let authCookies: string[] = []; // Armazena cookies de autenticação
 
 // Dados para testes - username curto para caber no limite de 20 chars
 const timestamp = Date.now().toString().slice(-6); // Últimos 6 dígitos
@@ -81,6 +82,11 @@ describe('Testes de Integração', () => {
       expect(registerData).toHaveProperty('user');
       expect(registerData.user.email).toBe(testUser.email);
       expect(registerData.user.username).toBe(testUser.username);
+
+      // Guarda cookies de autenticação para usar nos próximos testes
+      authCookies = registerResponse.cookies.map(
+        (c: { name: string; value: string }) => `${c.name}=${c.value}`
+      );
 
       // Login com o usuário recém-criado
       const loginResponse = await app.inject({
@@ -156,6 +162,34 @@ describe('Testes de Integração', () => {
         expect(responseBody.data[0]).toHaveProperty('fullName');
         expect(responseBody.data[0]).toHaveProperty('isActive');
       }
+    });
+  });
+
+  // ==========================================================================
+  // Teste 4: Atualização de Preferências (Piloto Favorito)
+  // ==========================================================================
+  describe('Setagem de piloto favorito', () => {
+    it('Deve atualizar o piloto favorito do usuário autenticado', async () => {
+      // Extrai token de autenticação dos cookies
+      const accessTokenCookie = authCookies.find(c => c.startsWith('accessToken='));
+      const accessToken = accessTokenCookie?.split('=')[1];
+
+      const response = await app.inject({
+        method: 'PUT',
+        url: '/api/v1/teams/preferences/me',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        payload: { favoriteDriverId: 1 },
+      });
+
+      expect(response.statusCode).toBe(200);
+      
+      const responseBody = JSON.parse(response.body);
+      
+      expect(responseBody).toHaveProperty('success', true);
+      expect(responseBody).toHaveProperty('message');
+      expect(responseBody.message).toBe('Preferências atualizadas com sucesso');
     });
   });
 });
